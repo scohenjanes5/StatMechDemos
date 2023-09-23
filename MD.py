@@ -43,6 +43,7 @@ def T(v):
 
 def advance_time(total_time,dt,x0,v0):
     """
+    Progressivly calculates the position and velocity of a harmonic oscillator after each timestep dt. Compares to the analytic solution.
     """
     v_array = [v0]
     x_array = [x0]
@@ -83,11 +84,8 @@ def advance_time(total_time,dt,x0,v0):
         xt = x0
         vt = v0
 
-    analytic_position = x_analytic(total_time,Initial_x,Initial_v)
-    analytic_velocity = v_analytic(total_time,Initial_x,Initial_v)
-    #format the output to 2 decimal places
     print(f"At time t = {total_time:.2f} the position is {xt:.3f} and the velocity is {vt:.5f}")
-    print(f"The analytic position is {analytic_position:.3f} and the analytic velocity is {analytic_velocity:.5f}")
+    print(f"The analytic position is {analitic_x:.3f} and the analytic velocity is {analitic_v:.5f}")
     return v_array, x_array, PE_array, KE_array, Total_energy, x_differences, v_differences
 
 ##############################################################################################################
