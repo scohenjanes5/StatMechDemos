@@ -5,11 +5,11 @@
 
  Here, the Velocity Verlet algorithm is used to numerically solve for a harmonic oscillator's point in phase space at a given time. w and m are set to 1 for simplicity.
 
- $V(x) = 0.5*x^2,
- F(x) = -V'(x) = -x
+ $V(x) = 0.5*x^2$,
+ $F(x) = -V'(x) = -x$
 
- x(τ) = x(0) + v(0) * τ + 0.5* τ^2 * F(0)
- v(τ) = v(0) + 0.5 * (F(0)+F(τ)) * τ$
+ $x(τ) = x(0) + v(0) * τ + 0.5* τ^2 * F(0)$
+ $v(τ) = v(0) + 0.5 * (F(0)+F(τ)) * τ$
 
  For this simulation, $x(0)=1$, $v(0)=0$ and $dt=0.1$
 
