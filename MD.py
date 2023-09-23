@@ -24,26 +24,25 @@ def x(dt,x0,v0):
 
 def v(dt,x0,v0,xt):
     """
-    calculates the velocity of a harmonic oscillator at time t given initial conditions.
+    calculates the velocity of a harmonic oscillator after a timestep dt.
     The average force at the beginning and end of the timestep are used
     """
     return v0 + dt * (-x0 + -xt) / 2
 
 def V(x):
     """
-    calculates the potential energy of a harmonic oscillator at position x.
+    Potential energy of a harmonic oscillator at position x.
     """
     return 0.5 * x**2
 
 def T(v):
     """
-    calculates the kinetic energy of a harmonic oscillator at velocity v.
+    Kinetic energy of a harmonic oscillator at velocity v.
     """
     return 0.5 * v**2
 
 def advance_time(total_time,dt,x0,v0):
     """
-    calls for the next state of the harmonic oscillator at time t given conditions after the previous step.
     """
     v_array = [v0]
     x_array = [x0]
@@ -74,11 +73,11 @@ def advance_time(total_time,dt,x0,v0):
         KE_array.append(KE)
         Total_energy.append(PE+KE)
 
+        #update the variables for the next timestep
         x0 = xt
         v0 = vt
         time_elapsed += dt
-        #format the output to 2 decimal places
-#        print(f"At time t = {time_elapsed:.2f} the position is {xt:.3f}, the velocity is {vt:.5f} and the total energy is {PE+KE:.3f}")
+        #print(f"At time t = {time_elapsed:.2f} the position is {xt:.3f}, the velocity is {vt:.5f} and the total energy is {PE+KE:.3f}")
    
     if total_time == 0:
         xt = x0
@@ -91,6 +90,8 @@ def advance_time(total_time,dt,x0,v0):
     print(f"The analytic position is {analytic_position:.3f} and the analytic velocity is {analytic_velocity:.5f}")
     return v_array, x_array, PE_array, KE_array, Total_energy, x_differences, v_differences
 
+##############################################################################################################
+#set initial conditions
 Initial_x = 1
 Initial_v = 0
 Time_elapsed = 100
