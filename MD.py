@@ -16,18 +16,18 @@ def v_analytic(t,x0,v0):
     """
     return v0 * np.cos(t) - x0 * np.sin(t)
 
-def x(t,x0,v0):
+def x(dt,x0,v0):
     """
-    calculates the position of a harmonic oscillator at time t given initial conditions.
+    calculates the position of a harmonic oscillator after a single timestep.
     """
-    return x0 + v0 * t + 0.5 * t**2 * -x0 #F(0,x0,v0)
+    return x0 + v0 * dt + 0.5 * dt**2 * -x0 #F(0,x0,v0)
 
-def v(t,x0,v0,xt):
+def v(dt,x0,v0,xt):
     """
     calculates the velocity of a harmonic oscillator at time t given initial conditions.
     The average force at the beginning and end of the timestep are used
     """
-    return v0 + t * (-x0 + -xt) / 2
+    return v0 + dt * (-x0 + -xt) / 2
 
 def V(x):
     """
