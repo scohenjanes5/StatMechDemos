@@ -20,3 +20,5 @@
  v(t) = v(0) * cos(t) - x(0) * sin(t)
 
  The error of the simulation oscilate within +/-0.1 of the analytical values, and the total energy is conserved, barring tiny fluctuations.
+
+ <img src="MD.png">
