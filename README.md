@@ -18,6 +18,7 @@
  After calculating $x$ and $v$ after one timestep, the same equations can be applied repeatedly to extend the prediction to further lengths of time.
 
  The results are compared to the analytical solution for the classical harmonic oscillator, which is
+ 
  $x(t) = x(0) * cos(t) + v(0) * sin(t)$
  
  $v(t) = v(0) * cos(t) - x(0) * sin(t)$
