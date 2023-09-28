@@ -87,19 +87,27 @@ def probabilities(T, Energy_levels):
         probs.append(np.exp(-E/(kb*T)) / Z(T, Energy_levels))
     return probs
 
-def P_curve(T_max, Energy_levels):
+def P_curve(T_max, Energy_levels, allow_negative=False):
     """
     T_max: maximum temperature of the system
     Energy_levels: list of the energy levels of the system
+    allow_negative: if True, allows negative temperatures
     returns the probability of finding a particle in each level as a function of temperature.
     """
-    T_array=range(1,T_max)
+    if allow_negative:
+        T_array=range(-T_max,T_max)
+    else:
+        T_array=range(1,T_max)
     p1_array=[]
     p2_array=[]
     for T in track(T_array, description="[blue] Calculating probabilities vs temperature:"):
-        probs=probabilities(T, Energy_levels)
-        p1_array.append(probs[0])
-        p2_array.append(probs[1])
+        try:
+            probs=probabilities(T, Energy_levels)
+            p1_array.append(probs[0])
+            p2_array.append(probs[1])
+        except ZeroDivisionError:
+            p1_array.append(0)
+            p2_array.append(0)
     return p1_array, p2_array, T_array
 
 
@@ -107,9 +115,11 @@ Energy_levels=[0*kb,6*kb]
 total=1000
 S_array=[]
 E_array=[]
+Max_T=500
+
 
 #plotting the curves for probabilities vs temperature
-p1_array, p2_array, T_array = P_curve(500, Energy_levels)
+p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
 
 plt.plot(T_array,p1_array,label="Lower level")
 plt.plot(T_array,p2_array,label="Upper level")
@@ -122,10 +132,23 @@ plt.show()
 
 #plotting the curves for entropy vs energy
 #E_array,S_array=S_curve(total,Energy_levels)
-#plt.plot(E_array,S_array)
-#plt.xlabel("E (Number of particles in the upper level)")
-#plt.ylabel("Entropy")
-#plt.title(f"Entropy of a system with {total} particles")
+#slope_array=[]
+#temp_array=[]
+#for i in range(len(E_array)-1):
+#    slope=(S_array[i+1]-S_array[i])/(E_array[i+1]-E_array[i])
+#    slope_array.append(slope)
+#    temp_array.append(1/slope)
+
+#plot all three curves as subplots
+#fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
+#fig.suptitle(f"System with {total} particles")
+#ax2.plot(E_array[1:],slope_array)
+#ax2.set(ylabel="dS/dE (1/K)")
+#ax3.plot(E_array[1:],temp_array)
+#ax3.set(ylabel="T (K)")
+#ax1.plot(E_array,S_array)
+#ax1.set(xlabel="E (J)", ylabel="S (J/K)")
 #plt.show()
+
 
 
