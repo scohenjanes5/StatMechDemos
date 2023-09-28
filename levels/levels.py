@@ -110,7 +110,7 @@ plt.legend()
 plt.show()
 
 
-
+#plotting the curves for entropy vs energy
 #E_array,S_array=S_curve(total,Energy_levels)
 #plt.plot(E_array,S_array)
 #plt.xlabel("E (Number of particles in the upper level)")
