@@ -88,18 +88,28 @@ def probabilities(T, Energy_levels):
     return probs
 
 Energy_levels=[0,1e-20]
+def P_curve(T_max, Energy_levels):
+    """
+    T_max: maximum temperature of the system
+    Energy_levels: list of the energy levels of the system
+    returns the probability of finding a particle in each level as a function of temperature.
+    """
+    T_array=range(1,T_max)
+    p1_array=[]
+    p2_array=[]
+    for T in track(T_array, description="[blue] Calculating probabilities vs temperature:"):
+        probs=probabilities(T, Energy_levels)
+        p1_array.append(probs[0])
+        p2_array.append(probs[1])
+    return p1_array, p2_array, T_array
+
+
 total=1000
 S_array=[]
 E_array=[]
-p1_array=[]
-p2_array=[]
 
 #plotting the curves for probabilities vs temperature
-T_array=range(1,30000)
-for T in track(T_array, description="[blue] Calculating probabilities vs temperature:"):
-    probs=probabilities(T, Energy_levels)
-    p1_array.append(probs[0])
-    p2_array.append(probs[1])
+p1_array, p2_array, T_array = P_curve(500, Energy_levels)
 
 plt.plot(T_array,p1_array,label="Lower level")
 plt.plot(T_array,p2_array,label="Upper level")
