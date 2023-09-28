@@ -87,7 +87,6 @@ def probabilities(T, Energy_levels):
         probs.append(np.exp(-E/(kb*T)) / Z(T, Energy_levels))
     return probs
 
-Energy_levels=[0,1e-20]
 def P_curve(T_max, Energy_levels):
     """
     T_max: maximum temperature of the system
@@ -104,6 +103,7 @@ def P_curve(T_max, Energy_levels):
     return p1_array, p2_array, T_array
 
 
+Energy_levels=[0*kb,6*kb]
 total=1000
 S_array=[]
 E_array=[]
