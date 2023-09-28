@@ -64,7 +64,7 @@ for up in track(range(1,total), description="[blue] Calculating S(E) curve:"):
 
 
 plt.plot(E_array,S_array)
-plt.xlabel("Number of particles in the upper level")
+plt.xlabel("E (Number of particles in the upper level)")
 plt.ylabel("Entropy")
 plt.title(f"Entropy of a system with {total} particles")
 plt.show()
