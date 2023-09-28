@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+from rich.progress import track
 """
 Finds the population of each level based on the temperature of the system.
 """
@@ -54,11 +55,10 @@ def S(total,up):
         S = kb*ln_stirling_omega(down,up)
     return S
 
-total=10000
+total=1000
 S_array=[]
 E_array=[]
-for up in range(1,total):
-    print(up)
+for up in track(range(1,total), description="[blue] Calculating S(E) curve:"):
     S_array.append(S(total,up))
     E_array.append(up)
 
