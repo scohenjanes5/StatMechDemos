@@ -3,11 +3,14 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from rich.progress import track
+from decimal import Decimal, getcontext
 """
 Finds the population of each level based on the temperature of the system.
 """
+getcontext().prec=500
+
 global kb
-kb=1.38064852e-23
+kb=Decimal("1.38064852e-23")
 
 class microcanonical:
     """
@@ -34,7 +37,7 @@ class microcanonical:
         num_up=sum(starting_array)
         entropy_array=[S(self.total,num_up)]
         energy_array=[num_up*self.Energy_levels[1]+(self.total-num_up)*self.Energy_levels[0]]
-        for i in range(self.total):
+        for i in track(range(self.total), description="[blue] Determining populations of energy levels:"):
             if np.random.rand()<self.probs[0]:
                 starting_array[i]=0
             else:
@@ -52,11 +55,11 @@ def omega(n1,n2):
     returns omega, which is the number of possible arrangements of a system with n1 particles in the lower level and n2 particles in the upper level.
     """
     omega = math.factorial(n1+n2)/(math.factorial(n1)*math.factorial(n2))
-    return omega
+    return Decimal(str(omega))
 
 def stirling(n):
     """
-    n: number to take the factorial of
+    n: number to take the factorial of, then ln
     Use the stirling approximation for the factorial to calculate ln(n!).
     """
     stirling = n*np.log(n)-n
@@ -81,9 +84,9 @@ def S(total,up):
     """
     down=total-up
     try:
-        S = kb*np.log(omega(down,up))
+        S = kb*omega(down,up).ln()
     except OverflowError:
-        S = kb*ln_stirling_omega(down,up)
+        S = kb*Decimal(str(ln_stirling_omega(down,up)))
     return S
 
 def S_curve(total,Energy_levels):
@@ -147,23 +150,28 @@ def P_curve(T_max, Energy_levels, allow_negative=False):
 
 
 Energy_levels=[0*kb,6*kb]
-total=1000
+total=3000
 S_array=[]
 E_array=[]
-Max_T=500
+Max_T=5
 
 system=microcanonical(total,Energy_levels,Max_T)
-#average_slope=np.mean(np.diff(system.entropy_array))/np.mean(np.diff(system.energy_array))
 print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
-#print(f"The average slope of the entropy vs energy curve is {average_slope} 1/K.") 
-#print(f"This corresponds to an average temperature of {1/average_slope} K.")
+
+#print(system.entropy_array[-2:],system.energy_array[-2:])
+#energy_diff=system.energy_array[-1]-system.energy_array[-2]
+#entropy_diff=system.entropy_array[-1]-system.entropy_array[-2]
+#print(entropy_diff,energy_diff)
+#final_temp = energy_diff/entropy_diff
+
+#print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
 
 #plotting the curves for entropy vs energy
-#plt.plot(system.energy_array,system.entropy_array)
-#plt.xlabel("Energy (J)")
-#plt.ylabel("Entropy (J/K)")
-#plt.title(f"System with {total} particles")
-#plt.show()
+plt.plot(system.energy_array,system.entropy_array)
+plt.xlabel("Energy (J)")
+plt.ylabel("Entropy (J/K)")
+plt.title(f"System with {total} particles")
+plt.show()
 
 
 #plotting the curves for probabilities vs temperature
@@ -197,6 +205,5 @@ print(f"The number of particles in the upper level is {sum(system.starting_array
 #ax1.plot(E_array,S_array)
 #ax1.set(xlabel="E (J)", ylabel="S (J/K)")
 #plt.show()
-
 
 
