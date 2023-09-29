@@ -12,8 +12,10 @@ kb=1.38064852e-23
 class microcanonical:
     """
     total: total number of particles in the system
-    Energy_levels: list of the energy levels of the system
+    Energy_levels: list of the energy levels of the system (in Jules)
     Temperature: temperature of the system
+    starting_level: level to start the system in (integer indicies)
+    probs: list of the probabilities of finding a particle in each level
     """
     def __init__(self, total, Energy_levels, Temperature, starting_level=0):
         self.total=total
@@ -21,15 +23,26 @@ class microcanonical:
         self.Temperature=Temperature
         self.probs=probabilities(self.Temperature, self.Energy_levels)
         self.starting_level=starting_level
-        #the particle array should be as long as the value for total, with the value for each particle equal to starting_level.
+        self.entropy_array, self.energy_array, self.starting_array=self.populate_levels()
         
     def populate_levels(self):
         """
         Populates the levels of the system based on the probabilities of each level.
         """
         starting_array=[self.starting_level]*self.total
-
-        #continue here
+        #sum used to get count in level 1. If extending to more levels, will need to use other method.
+        num_up=sum(starting_array)
+        entropy_array=[S(self.total,num_up)]
+        energy_array=[num_up*self.Energy_levels[1]+(self.total-num_up)*self.Energy_levels[0]]
+        for i in range(self.total):
+            if np.random.rand()<self.probs[0]:
+                starting_array[i]=0
+            else:
+                starting_array[i]=1
+            num_up=sum(starting_array)
+            entropy_array.append(S(self.total,num_up))
+            energy_array.append(num_up*self.Energy_levels[1]+(self.total-num_up)*self.Energy_levels[0])
+        return entropy_array, energy_array, starting_array
 
 
 def omega(n1,n2):
@@ -138,6 +151,19 @@ total=1000
 S_array=[]
 E_array=[]
 Max_T=500
+
+system=microcanonical(total,Energy_levels,Max_T)
+#average_slope=np.mean(np.diff(system.entropy_array))/np.mean(np.diff(system.energy_array))
+print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
+#print(f"The average slope of the entropy vs energy curve is {average_slope} 1/K.") 
+#print(f"This corresponds to an average temperature of {1/average_slope} K.")
+
+#plotting the curves for entropy vs energy
+#plt.plot(system.energy_array,system.entropy_array)
+#plt.xlabel("Energy (J)")
+#plt.ylabel("Entropy (J/K)")
+#plt.title(f"System with {total} particles")
+#plt.show()
 
 
 #plotting the curves for probabilities vs temperature
