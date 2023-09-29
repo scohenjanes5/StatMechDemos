@@ -9,6 +9,28 @@ Finds the population of each level based on the temperature of the system.
 global kb
 kb=1.38064852e-23
 
+class microcanonical:
+    """
+    total: total number of particles in the system
+    Energy_levels: list of the energy levels of the system
+    Temperature: temperature of the system
+    """
+    def __init__(self, total, Energy_levels, Temperature, starting_level=0):
+        self.total=total
+        self.Energy_levels=Energy_levels
+        self.Temperature=Temperature
+        self.probs=probabilities(self.Temperature, self.Energy_levels)
+        self.starting_level=starting_level
+        #the particle array should be as long as the value for total, with the value for each particle equal to starting_level.
+        
+    def populate_levels(self):
+        """
+        Populates the levels of the system based on the probabilities of each level.
+        """
+        starting_array=[self.starting_level]*self.total
+
+        #continue here
+
 
 def omega(n1,n2):
     """
@@ -119,15 +141,15 @@ Max_T=500
 
 
 #plotting the curves for probabilities vs temperature
-p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
+#p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
 
-plt.plot(T_array,p1_array,label="Lower level")
-plt.plot(T_array,p2_array,label="Upper level")
-plt.xlabel("Temperature")
-plt.ylabel("Probability")
-plt.title(f"Probability of finding a particle in each level")
-plt.legend()
-plt.show()
+#plt.plot(T_array,p1_array,label="Lower level")
+#plt.plot(T_array,p2_array,label="Upper level")
+#plt.xlabel("Temperature")
+#plt.ylabel("Probability")
+#plt.title(f"Probability of finding a particle in each level")
+#plt.legend()
+#plt.show()
 
 
 #plotting the curves for entropy vs energy
