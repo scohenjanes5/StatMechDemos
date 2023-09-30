@@ -40,14 +40,15 @@ class microcanonical:
                 starting_array[i]=0
             else:
                 starting_array[i]=1
+
+            if starting_array[i] == self.starting_level:
+                continue
+
             num_up=sum(starting_array)
             new_entropy=S(self.total,num_up)
             new_energy=num_up*self.Energy_levels[1]+(self.total-num_up)*self.Energy_levels[0]
-            if new_entropy == entropy_array[-1] and new_energy == energy_array[-1]:
-                continue #don't write duplicate entries because this messes up slope calculations
-            else:
-                entropy_array.append(new_entropy)
-                energy_array.append(new_energy)
+            entropy_array.append(new_entropy)
+            energy_array.append(new_energy)
         return entropy_array, energy_array, starting_array
 
 
