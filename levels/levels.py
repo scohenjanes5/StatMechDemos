@@ -137,10 +137,11 @@ def P_curve(T_max, Energy_levels, allow_negative=False):
     allow_negative: if True, allows negative temperatures
     returns the probability of finding a particle in each level as a function of temperature.
     """
+    limit=int(T_max)
     if allow_negative:
-        T_array=range(-T_max,T_max)
+        T_array=range(-limit,limit)
     else:
-        T_array=range(1,T_max)
+        T_array=range(1,limit)
     p1_array=[]
     p2_array=[]
     for T in track(T_array, description="[blue] Calculating probabilities vs temperature:"):
@@ -158,19 +159,23 @@ def getArgs():
     parser.add_argument('-n', default = 5000, type=int, help = "number of particles in the system")
     parser.add_argument('-t', '--temp', default = 25, help = "temperature of the system")
     parser.add_argument('-e', '--energy', nargs = 2, default = [0,6], help = "energy levels of the system in multiples of kb")
-    parser.add_argument('-s', '--starting', default = 0, help = "starting level of the system. Either 0 or 1.")
+    parser.add_argument('-l', '--starting_level', default = 0, help = "starting level of the system. Either 0 or 1.")
     parser.add_argument('-m', '--monte', default=False, action="store_true", help = "run the monte carlo simulation")
     parser.add_argument('-p', '--prob', default=False, action="store_true", help = "plot the probability curves")
     parser.add_argument('-q', '--quiet', default=False, action="store_true", help = "don't plot the S(E) curve for the monte carlo simulation.")
+    parser.add_argument('-s', '--se_curve', default=False, action="store_true", help = "plot the theoretical S(E) curve.")
     args = parser.parse_args()
     return args
 
 
 args = getArgs()
+if not args.monte and not args.prob and not args.se_curve:
+    print("Please specify a job to run. Use the -h flag for a list of options.")
+    quit()
 total = args.n
 Energy_levels = [kb*e for e in args.energy]
 Max_T = Decimal(str(args.temp))
-starting_level = args.starting
+starting_level = args.starting_level
 
 #Energy_levels=[0*kb,6*kb]
 #total=10000
@@ -196,35 +201,37 @@ if args.monte:
         plt.title(f"System with {total} particles")
         plt.show()
 
-#plotting the curves for probabilities vs temperature
-#p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
 
-#plt.plot(T_array,p1_array,label="Lower level")
-#plt.plot(T_array,p2_array,label="Upper level")
-#plt.xlabel("Temperature")
-#plt.ylabel("Probability")
-#plt.title(f"Probability of finding a particle in each level")
-#plt.legend()
-#plt.show()
+if args.prob:
+    #plotting the curves for probabilities vs temperature
+    p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
 
+    plt.plot(T_array,p1_array,label="Lower level")
+    plt.plot(T_array,p2_array,label="Upper level")
+    plt.xlabel("Temperature")
+    plt.ylabel("Probability")
+    plt.title(f"Probability of finding a particle in each level")
+    plt.legend()
+    plt.show()
 
-#plotting the curves for entropy vs energy
-#E_array,S_array=S_curve(total,Energy_levels)
-#slope_array=[]
-#temp_array=[]
-#for i in range(len(E_array)-1):
-#    slope=(S_array[i+1]-S_array[i])/(E_array[i+1]-E_array[i])
-#    slope_array.append(slope)
-#    temp_array.append(1/slope)
+if args.se_curve:
+    #plotting the curves for entropy vs energy
+    E_array,S_array=S_curve(total,Energy_levels)
+    slope_array=[]
+    temp_array=[]
+    for i in range(len(E_array)-1):
+        slope=(S_array[i+1]-S_array[i])/(E_array[i+1]-E_array[i])
+        slope_array.append(slope)
+        temp_array.append(1/slope)
 
-#plot all three curves as subplots
-#fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
-#fig.suptitle(f"System with {total} particles")
-#ax2.plot(E_array[1:],slope_array)
-#ax2.set(ylabel="dS/dE (1/K)")
-#ax3.plot(E_array[1:],temp_array)
-#ax3.set(ylabel="T (K)")
-#ax1.plot(E_array,S_array)
-#ax1.set(xlabel="E (J)", ylabel="S (J/K)")
-#plt.show()
+    #plot all three curves as subplots
+    fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=True)
+    fig.suptitle(f"System with {total} particles")
+    ax2.plot(E_array[1:],slope_array)
+    ax2.set(ylabel="dS/dE (1/K)")
+    ax3.plot(E_array[1:],temp_array)
+    ax3.set(ylabel="T (K)")
+    ax1.plot(E_array,S_array)
+    ax1.set(xlabel="E (J)", ylabel="S (J/K)")
+    plt.show()
 
