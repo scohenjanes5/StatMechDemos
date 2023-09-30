@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+import argparse
 import math
 import matplotlib.pyplot as plt
 from rich.progress import track
@@ -10,7 +11,7 @@ Finds the population of each level based on the temperature of the system.
 global kb
 kb=Decimal("1.38064852e-23")
 
-class microcanonical:
+class MonteCarlo:
     """
     total: total number of particles in the system
     Energy_levels: list of the energy levels of the system (in Jules)
@@ -152,29 +153,48 @@ def P_curve(T_max, Energy_levels, allow_negative=False):
             p2_array.append(0)
     return p1_array, p2_array, T_array
 
+def getArgs():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-n', default = 5000, type=int, help = "number of particles in the system")
+    parser.add_argument('-t', '--temp', default = 25, help = "temperature of the system")
+    parser.add_argument('-e', '--energy', nargs = 2, default = [0,6], help = "energy levels of the system in multiples of kb")
+    parser.add_argument('-s', '--starting', default = 0, help = "starting level of the system. Either 0 or 1.")
+    parser.add_argument('-m', '--monte', default=False, action="store_true", help = "run the monte carlo simulation")
+    parser.add_argument('-p', '--prob', default=False, action="store_true", help = "plot the probability curves")
+    parser.add_argument('-q', '--quiet', default=False, action="store_true", help = "don't plot the S(E) curve for the monte carlo simulation.")
+    args = parser.parse_args()
+    return args
 
-Energy_levels=[0*kb,6*kb]
-total=10000
+
+args = getArgs()
+total = args.n
+Energy_levels = [kb*e for e in args.energy]
+Max_T = Decimal(str(args.temp))
+starting_level = args.starting
+
+#Energy_levels=[0*kb,6*kb]
+#total=10000
+#Max_T=100
 S_array=[]
 E_array=[]
-Max_T=100
 
-system=microcanonical(total,Energy_levels,Max_T,starting_level=1)
-print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
-print(f"This ratio is {sum(system.starting_array)/total:.4f}.")
-energy_diff=system.energy_array[-1]-system.energy_array[-2]
-entropy_diff=system.entropy_array[-1]-system.entropy_array[-2]
-final_temp = energy_diff/entropy_diff
+if args.monte:
+    system=MonteCarlo(total,Energy_levels,Max_T,starting_level=starting_level)
+    print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
+    print(f"This ratio is {sum(system.starting_array)/total:.4f}.")
+    energy_diff=system.energy_array[-1]-system.energy_array[-2]
+    entropy_diff=system.entropy_array[-1]-system.entropy_array[-2]
+    final_temp = energy_diff/entropy_diff
 
-print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
+    print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
 
-#plotting the curves for entropy vs energy
-plt.plot(system.energy_array,system.entropy_array)
-plt.xlabel("Energy (J)")
-plt.ylabel("Entropy (J/K)")
-plt.title(f"System with {total} particles")
-plt.show()
-
+    if not args.quiet:
+        #plotting the curves for entropy vs energy
+        plt.plot(system.energy_array,system.entropy_array)
+        plt.xlabel("Energy (J)")
+        plt.ylabel("Entropy (J/K)")
+        plt.title(f"System with {total} particles")
+        plt.show()
 
 #plotting the curves for probabilities vs temperature
 #p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
