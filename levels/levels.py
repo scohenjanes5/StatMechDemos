@@ -3,12 +3,10 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from rich.progress import track
-from decimal import Decimal, getcontext
+from decimal import Decimal
 """
 Finds the population of each level based on the temperature of the system.
 """
-getcontext().prec=500
-
 global kb
 kb=Decimal("1.38064852e-23")
 
@@ -43,8 +41,13 @@ class microcanonical:
             else:
                 starting_array[i]=1
             num_up=sum(starting_array)
-            entropy_array.append(S(self.total,num_up))
-            energy_array.append(num_up*self.Energy_levels[1]+(self.total-num_up)*self.Energy_levels[0])
+            new_entropy=S(self.total,num_up)
+            new_energy=num_up*self.Energy_levels[1]+(self.total-num_up)*self.Energy_levels[0]
+            if new_entropy == entropy_array[-1] and new_energy == energy_array[-1]:
+                continue #don't write duplicate entries because this messes up slope calculations
+            else:
+                entropy_array.append(new_entropy)
+                energy_array.append(new_energy)
         return entropy_array, energy_array, starting_array
 
 
@@ -63,7 +66,7 @@ def stirling(n):
     Use the stirling approximation for the factorial to calculate ln(n!).
     """
     stirling = n*np.log(n)-n
-    return stirling
+    return Decimal(str(stirling))
 
 def ln_stirling_omega(n1,n2):
     return stirling(n1+n2)-stirling(n1)-stirling(n2)
@@ -86,7 +89,7 @@ def S(total,up):
     try:
         S = kb*omega(down,up).ln()
     except OverflowError:
-        S = kb*Decimal(str(ln_stirling_omega(down,up)))
+        S = kb*ln_stirling_omega(down,up)
     return S
 
 def S_curve(total,Energy_levels):
@@ -150,21 +153,19 @@ def P_curve(T_max, Energy_levels, allow_negative=False):
 
 
 Energy_levels=[0*kb,6*kb]
-total=3000
+total=10000
 S_array=[]
 E_array=[]
-Max_T=5
+Max_T=100
 
 system=microcanonical(total,Energy_levels,Max_T)
 print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
+print(f"This ratio is {sum(system.starting_array)/total:.4f}.")
+energy_diff=system.energy_array[-1]-system.energy_array[-2]
+entropy_diff=system.entropy_array[-1]-system.entropy_array[-2]
+final_temp = energy_diff/entropy_diff
 
-#print(system.entropy_array[-2:],system.energy_array[-2:])
-#energy_diff=system.energy_array[-1]-system.energy_array[-2]
-#entropy_diff=system.entropy_array[-1]-system.entropy_array[-2]
-#print(entropy_diff,energy_diff)
-#final_temp = energy_diff/entropy_diff
-
-#print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
+print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
 
 #plotting the curves for entropy vs energy
 plt.plot(system.energy_array,system.entropy_array)
@@ -205,5 +206,4 @@ plt.show()
 #ax1.plot(E_array,S_array)
 #ax1.set(xlabel="E (J)", ylabel="S (J/K)")
 #plt.show()
-
 
