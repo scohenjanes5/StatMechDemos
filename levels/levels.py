@@ -168,11 +168,11 @@ final_temp = energy_diff/entropy_diff
 print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
 
 #plotting the curves for entropy vs energy
-plt.plot(system.energy_array,system.entropy_array)
-plt.xlabel("Energy (J)")
-plt.ylabel("Entropy (J/K)")
-plt.title(f"System with {total} particles")
-plt.show()
+#plt.plot(system.energy_array,system.entropy_array)
+#plt.xlabel("Energy (J)")
+#plt.ylabel("Entropy (J/K)")
+#plt.title(f"System with {total} particles")
+#plt.show()
 
 
 #plotting the curves for probabilities vs temperature
