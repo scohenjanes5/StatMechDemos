@@ -25,4 +25,4 @@
 
  The error of the simulation oscilate within +/-0.1 of the analytical values, and the total energy is conserved, barring tiny fluctuations.
 
- <img src="MD.png">
+ <img src="MD/MD.png">
