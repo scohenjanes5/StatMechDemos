@@ -159,7 +159,7 @@ S_array=[]
 E_array=[]
 Max_T=100
 
-system=microcanonical(total,Energy_levels,Max_T)
+system=microcanonical(total,Energy_levels,Max_T,starting_level=1)
 print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
 print(f"This ratio is {sum(system.starting_array)/total:.4f}.")
 energy_diff=system.energy_array[-1]-system.energy_array[-2]
@@ -169,11 +169,11 @@ final_temp = energy_diff/entropy_diff
 print(f"The numerically determined temperature is {final_temp:.2f} K, compared to the expected temperature of {Max_T} K.")
 
 #plotting the curves for entropy vs energy
-#plt.plot(system.energy_array,system.entropy_array)
-#plt.xlabel("Energy (J)")
-#plt.ylabel("Entropy (J/K)")
-#plt.title(f"System with {total} particles")
-#plt.show()
+plt.plot(system.energy_array,system.entropy_array)
+plt.xlabel("Energy (J)")
+plt.ylabel("Entropy (J/K)")
+plt.title(f"System with {total} particles")
+plt.show()
 
 
 #plotting the curves for probabilities vs temperature
