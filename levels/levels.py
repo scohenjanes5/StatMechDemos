@@ -244,6 +244,9 @@ if args.se_curve:
     ax2.set(ylabel="dS/dE (1/K)")
     ax3.plot(E_array[1:],temp_array)
     ax3.set(ylabel="T (K)")
+    #ylimit for temperature plot
+    if int(Max_T) > 25:
+        ax3.set_ylim(-(int(Max_T)+1),int(Max_T)+1)
     ax1.plot(E_array,S_array)
     ax1.set(xlabel="E (J)", ylabel="S (J/K)")
     plt.show()
