@@ -88,10 +88,16 @@ def S(total,up):
     returns the entropy of the system.
     """
     down=total-up
-    try:
-        S = kb*omega(down,up).ln()
-    except OverflowError:
+    if up*down == 0:
+        return 0
+    elif stirling_only:
         S = kb*ln_stirling_omega(down,up)
+        return S
+    else:
+        try:
+            S = kb*omega(down,up).ln()
+        except OverflowError:
+            S = kb*ln_stirling_omega(down,up)
     return S
 
 def S_curve(total,Energy_levels):
@@ -156,7 +162,7 @@ def P_curve(T_max, Energy_levels, allow_negative=False):
 
 def getArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', default = 5000, type=int, help = "number of particles in the system")
+    parser.add_argument('-n', default = 10000, type=int, help = "number of particles in the system")
     parser.add_argument('-t', '--temp', default = 25, help = "temperature of the system")
     parser.add_argument('-e', '--energy', nargs = 2, default = [0,6], help = "energy levels of the system in multiples of kb")
     parser.add_argument('-l', '--starting_level', default = 0, help = "starting level of the system. Either 0 or 1.")
@@ -164,14 +170,18 @@ def getArgs():
     parser.add_argument('-p', '--prob', default=False, action="store_true", help = "plot the probability curves")
     parser.add_argument('-q', '--quiet', default=False, action="store_true", help = "don't plot the S(E) curve for the monte carlo simulation.")
     parser.add_argument('-s', '--se_curve', default=False, action="store_true", help = "plot the theoretical S(E) curve.")
+    parser.add_argument('-x', '--exact_omega', default=False, action="store_true", help = "Calculate the exact value of omega via combinatorics until overflow errors force a switch to stirling. If excluded, the program will only use the stirling approximation.")
     args = parser.parse_args()
     return args
-
 
 args = getArgs()
 if not args.monte and not args.prob and not args.se_curve:
     print("Please specify a job to run. Use the -h flag for a list of options.")
     quit()
+
+global stirling_only
+stirling_only=not args.exact_omega
+
 total = args.n
 Energy_levels = [kb*Decimal(e) for e in args.energy]
 Max_T = Decimal(args.temp)
