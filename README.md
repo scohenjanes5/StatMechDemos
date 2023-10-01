@@ -2,10 +2,10 @@
  Coding excersizes for my statistical mechanics class.
 
  ## Contents
- [Harmonic Oscillator](#molecular-dynamics) MD simulation for homework.\
+ [Harmonic Oscillator](#harmonic-oscillator) MD simulation for homework.\
  [Two Level System](#two-level-system) Project #1
 
- ## Molecular Dynamics
+ ## Harmonic Oscillator
 
  ### Requirements
  matplotlib\
