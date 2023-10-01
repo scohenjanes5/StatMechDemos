@@ -73,15 +73,19 @@
   The same rules are being applied in any of the above cases, which shows how negative temperatures can come about in cases of the system being initialized in a configuration inaccessable by thermal excitation.
 
 
-  The program uses the stirling approximation by default to improve performance. However, the exact value of omega can be requested with the `-x` flag. The stirling approximation will be used if an overflow error is encountered. The transition point between the two methods can be seen with the following example due to the small kink formed in the $S(E)$ curve.
+  The program uses the stirling approximation by default to improve performance. 
+
+  A the default system with 10,000 particles completed instantaneously when only the approximation (`./levels.py -st 250`).
+  <img src="levels/SE_approx.png">
+
+  In addition to the default, the exact value of omega can be requested with the `-x` flag. The stirling approximation will be used if an overflow error is encountered. The transition point between the two methods can be seen with the following example due to the small kink formed in the $S(E)$ curve.
   ```
-  ./levels.py -sxn 5000
+  ./levels.py -sxt 250
   Calculating S(E) curve: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:04
  ```
- <img src="levels/SE_transition.png">
+  <img src="levels/SE_transition.png">
+  The following example takes longer, but by saving the percent of the population in the upper level at which the overflow error occurs, the middle portion of the curve can be run only witht he stirling approximation, only restarting exact calculations for omega after raching the complementary ratio that triggered the first overflow error.
 
-  Running the command with only the approximation (`./levels.py -sn 5000`) yeilds a smooth curve.
-  <img src="levels/SE_approx.png">
 
   We can also see how reducing the gap between the energy levels allows the populations to approximately equalize at a lower temperature.
 
@@ -92,6 +96,8 @@
   `./levels.py -pe  4 6`
   
   <img src="levels/small_gap.png">
+
+  The view can be extended further with the `-t` flag.
 
   See the help, `./levels.py -h` for more information.
 
