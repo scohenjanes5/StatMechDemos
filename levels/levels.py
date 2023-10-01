@@ -173,8 +173,8 @@ if not args.monte and not args.prob and not args.se_curve:
     print("Please specify a job to run. Use the -h flag for a list of options.")
     quit()
 total = args.n
-Energy_levels = [kb*e for e in args.energy]
-Max_T = Decimal(str(args.temp))
+Energy_levels = [kb*Decimal(e) for e in args.energy]
+Max_T = Decimal(args.temp)
 starting_level = args.starting_level
 
 S_array=[]
