@@ -183,7 +183,7 @@ E_array=[]
 if args.monte:
     system=MonteCarlo(total,Energy_levels,Max_T,starting_level=starting_level)
     print(f"The number of particles in the upper level is {sum(system.starting_array)} out of {total} particles.")
-    print(f"This ratio is {sum(system.starting_array)/total:.4f}.")
+    print(f"This ratio is {sum(system.starting_array)/total:.4f}, compared to the expected ratio of {system.probs[1]:.4f}.")
     energy_diff=system.energy_array[-1]-system.energy_array[-2]
     entropy_diff=system.entropy_array[-1]-system.entropy_array[-2]
     final_temp = energy_diff/entropy_diff
