@@ -86,8 +86,11 @@
   We can also see how reducing the gap between the energy levels allows the populations to approximately equalize at a lower temperature.
 
   `./levels.py -p`
+  
   <img src="levels/modest_gap.png">
+  
   `./levels.py -pe  4 6`
+  
   <img src="levels/small_gap.png">
 
   See the help, `./levels.py -h` for more information.
