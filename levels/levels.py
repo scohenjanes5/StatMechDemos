@@ -10,6 +10,8 @@ Finds the population of each level based on the temperature of the system.
 """
 global kb
 kb=Decimal("1.38064852e-23")
+global overflow_ratio
+overflow_ratio=None
 
 class MonteCarlo:
     """
@@ -81,22 +83,26 @@ def stirling_omega(n1,n2):
     """
     omega = np.exp(ln_stirling_omega) #omega = math.factorial(n1+n2)/(math.factorial(n1)*math.factorial(n2))
     return omega
+
 def S(total,up):
     """
     total: total number of particles in the system
     up: number of particles in the upper level
     returns the entropy of the system.
     """
+    global overflow_ratio
     down=total-up
+    percent_up=up/total
     if up*down == 0:
         return 0
-    elif stirling_only:
+    elif stirling_only or (overflow_ratio is not None and percent_up > overflow_ratio and percent_up <= 1 - overflow_ratio):
         S = kb*ln_stirling_omega(down,up)
         return S
     else:
         try:
             S = kb*omega(down,up).ln()
-        except OverflowError:
+        except OverflowError: #we will only get an overflow error once because we save the overflow ratio and switch to the stirling approximation until we get close to the other end of the curve
+            overflow_ratio=percent_up
             S = kb*ln_stirling_omega(down,up)
     return S
 
