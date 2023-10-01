@@ -7,6 +7,10 @@
 
  ## Molecular Dynamics
 
+ ### Requirements
+ matplotlib\
+ numpy
+
  Here, the Velocity Verlet algorithm is used to numerically solve for a harmonic oscillator's point in phase space at a given time. w and m are set to 1 for simplicity.
 
  $V(x) = 0.5*x^2$,
@@ -32,6 +36,11 @@
  <img src="MD/MD.png">
 
   ## Two-Level System
+
+  ### Requirements
+  matplotlib\
+  numpy\
+  rich (for progress bars)
 
   Here the entropy of a 2-level system can be explored by exposing customizable system sizes, energy levels and temperatures to the user.
 
