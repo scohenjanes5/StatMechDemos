@@ -165,7 +165,7 @@ def getArgs():
     parser.add_argument('-n', default = 10000, type=int, help = "number of particles in the system")
     parser.add_argument('-t', '--temp', default = 25, help = "temperature of the system")
     parser.add_argument('-e', '--energy', nargs = 2, default = [0,6], help = "energy levels of the system in multiples of kb")
-    parser.add_argument('-l', '--starting_level', default = 0, help = "starting level of the system. Either 0 or 1.")
+    parser.add_argument('-l', '--starting_level', type=int, default = 0, help = "starting level of the system. Either 0 or 1.")
     parser.add_argument('-m', '--monte', default=False, action="store_true", help = "run the monte carlo simulation")
     parser.add_argument('-p', '--prob', default=False, action="store_true", help = "plot the probability curves")
     parser.add_argument('-q', '--quiet', default=False, action="store_true", help = "don't plot the S(E) curve for the monte carlo simulation.")

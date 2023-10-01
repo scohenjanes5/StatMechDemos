@@ -26,3 +26,56 @@
  The error of the simulation oscilate within +/-0.1 of the analytical values, and the total energy is conserved, barring tiny fluctuations.
 
  <img src="MD/MD.png">
+
+  ## Two-Level System
+
+  Here the entropy of a 2-level system can be explored by exposing customizable system sizes, energy levels and temperatures to the user.
+
+  Available calculations are the $P_E(T)$ and $S(E)$ curves and a Monte Carlo simulation. These are available with the `-p`, `-s`, and `-m` flags, respectively.  
+
+  Here is an example of the Monte Carlo simulation with 100,000 particles. Energy levels and temperature are the default.
+
+  ```
+  ./levels.py -mn 100000
+  Determining populations of energy levels: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:27
+  The number of particles in the upper level is 43920 out of 100000 particles.
+  This ratio is 0.4392, compared to the expected ratio of 0.4403.
+  The numerically determined temperature is 24.55 K, compared to the expected temperature of 25 K.
+
+  ```
+  <img src="levels/MonteCarlo100000N25K.png">
+
+
+  We can also specify that the simulation start with all particles in the upper level. We can also use a negative temperature.
+
+  ```
+  ./levels.py -m -n 100000 -t -25 -l 1
+  Determining populations of energy levels: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:26
+  The number of particles in the upper level is 55977 out of 100000 particles.
+  This ratio is 0.5598, compared to the expected ratio of 0.5597.
+  The numerically determined temperature is -24.97 K, compared to the expected temperature of -25 K.a
+  ```
+  <img src="levels/neg_t_l_1.png">
+
+  The same rules are being applied in any of the above cases, which shows how negative temperatures can come about in cases of the system being initialized in a configuration inaccessable by thermal excitation.
+
+
+  The program uses the stirling approximation by default to improve performance. However, the exact value of omega can be requested with the `-x` flag. The stirling approximation will be used if an overflow error is encountered. The transition point between the two methods can be seen with the following example due to the small kink formed in the $S(E)$ curve.
+  ```
+  ./levels.py -sxn 5000
+  Calculating S(E) curve: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:04
+ ```
+ <img src="levels/SE_transition.png">
+
+  Running the command with only the approximation (`./levels.py -sn 5000`) yeilds a smooth curve.
+  <img src="levels/SE_approx.png">
+
+  We can also see how reducing the gap between the energy levels allows the populations to approximately equalize at a lower temperature.
+
+  `./levels.py -p`
+  <img src="levels/modest_gap.png">
+  `./levels.py -pe  4 6`
+  <img src="levels/small_gap.png">
+
+  See the help, `./levels.py -h` for more information.
+
