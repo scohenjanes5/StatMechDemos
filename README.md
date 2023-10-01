@@ -76,6 +76,7 @@
   The program uses the stirling approximation by default to improve performance. 
 
   A the default system with 10,000 particles completed instantaneously when only the approximation (`./levels.py -st 250`).
+  
   <img src="levels/SE_approx.png">
 
   In addition to the default, the exact value of omega can be requested with the `-x` flag. The stirling approximation will be used if an overflow error is encountered. The transition point between the two methods can be seen with the following example due to the small kink formed in the $S(E)$ curve.
