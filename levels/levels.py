@@ -203,8 +203,8 @@ if args.prob:
     #plotting the curves for probabilities vs temperature
     p1_array, p2_array, T_array = P_curve(Max_T, Energy_levels, allow_negative=False)
 
-    plt.plot(T_array,p1_array,label="Lower level")
-    plt.plot(T_array,p2_array,label="Upper level")
+    plt.plot(T_array,p1_array,label=f"Lower level ({args.energy[0]} kb*K)")
+    plt.plot(T_array,p2_array,label=f"Upper level ({args.energy[1]} kb*K)")
     plt.xlabel("Temperature")
     plt.ylabel("Probability")
     plt.title(f"Probability of finding a particle in each level")
