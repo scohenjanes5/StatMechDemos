@@ -177,9 +177,6 @@ Energy_levels = [kb*e for e in args.energy]
 Max_T = Decimal(str(args.temp))
 starting_level = args.starting_level
 
-#Energy_levels=[0*kb,6*kb]
-#total=10000
-#Max_T=100
 S_array=[]
 E_array=[]
 
