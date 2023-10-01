@@ -42,8 +42,8 @@ class MonteCarlo:
             else:
                 starting_array[i]=1
 
-            if starting_array[i] == self.starting_level:
-                continue
+            if starting_array[i] == self.starting_level: #i.e. if nothing changed
+                continue #then no need to calculate the entropy or energy again, since nothing changed
 
             num_up=sum(starting_array)
             new_entropy=S(self.total,num_up)
