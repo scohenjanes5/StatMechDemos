@@ -35,12 +35,23 @@
 
  <img src="MD/MD.png">
 
+  Run with `./MD.py`
+
   ## Two-Level System
 
   ### Requirements
   matplotlib\
   numpy\
   rich (for progress bars)
+
+  ### Theoretical Background
+  This code calculates entropy by $k_b\ln(\Omega)$, where $\Omega$ is the number of configurations of the system for the given T, E, N, etc. $\Omega$ can be calculated by combinatorics: $\frac{(n+m)!}{n!m!}$, where $n$ and $m$ are the populations of the upper and lower level, respectively. However, this number becomes unweildy too quickly to use for all but small systems. Because $\ln\Omega$ is needed, we can use the sterling approximation: $(\ln(n))!=\text{sterling}(n) = n\ln(n)-n$. Furthermore, we use log rules to separate components of the combinatorial calculation into 3 sterling numbers $\ln\Omega \approx \text{sterling}(n+m) - \text{sterling}(n) - \text{sterling}(m)$. This is much faster to calculate, so it is used by default by the code.
+
+  A plot of the predicted occupancies of each level vs. T is also available. It demonstrates that because $\lim_{T\to\infty}p_j=1/Z$, and referring to the definition of $Z$, $\lim_{T\to\infty}\sum_ke^{-\beta E_k}=\sum_k1=k$, all levels are equally probable at high T. This means the configurations plotted on the $S(E)$ curve with upper level more occupied than the lower are only accessible at a negative temperature, as described by the definition $\frac{\partial S}{\partial E}=1/T$.
+
+  A Monte Carlo simulation is also available. The probabilities for occupying a particular energy level is given by $p_j=\frac{e^{-\beta E_j}}{\sum_ke^{-\beta E_k}}$, where $\beta=1/k_bT$. Each particle "chooses" its level independently, and from the partial plot of $S(E)$ that results, the temperature recovered is approximately equal to the temperature specified to initialize the simulation.
+
+  ### Instructions
 
   Here the entropy of a 2-level system can be explored by exposing customizable system sizes, energy levels and temperatures to the user.
 
