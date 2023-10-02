@@ -114,7 +114,7 @@ def S_curve(total,Energy_levels):
     """
     S_array=[]
     E_array=[]
-    for up in track(range(1,total+1), description="[blue] Calculating S(E) curve:"):
+    for up in track(range(0,total+1), description="[blue] Calculating S(E) curve:"):
         S_array.append(S(total,up))
         E_array.append(up*Energy_levels[1]+(total-up)*Energy_levels[0])
     return E_array,S_array
