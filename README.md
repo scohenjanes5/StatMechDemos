@@ -51,6 +51,13 @@
 
   A Monte Carlo simulation is also available. The probabilities for occupying a particular energy level is given by $p_j=\frac{e^{-\beta E_j}}{\sum_ke^{-\beta E_k}}$, where $\beta=1/k_bT$. Each particle "chooses" its level independently, and from the partial plot of $S(E)$ that results, the temperature recovered is approximately equal to the temperature specified to initialize the simulation.
 
+  ### Implementation Notes
+  Decimal types are used instead of floats because floats have very poor precision at the small scales required for this code, and Decimals allow arbitrary precision for arithmetic. This was especially important for the slope calculations for the $S(E)$ curve, where arithmetic with $\times 10^{-24}$-magnitude numbers led to DivideByZero errors when there shouldn't have been.
+
+  For the Monte Carlo simulation, if a particle does not change it's level from the one it was initialized at, the entropy and energy calculations are skipped, because they would yield the same results as the previously calculated value. This increases the performance greatly, especially for large systems at low temperatures (initialized at $l=0$).
+
+  The exact value of $\Omega$ can be requested, if possible. Details are described below.
+
   ### Instructions
 
   Here the entropy of a 2-level system can be explored by exposing customizable system sizes, energy levels and temperatures to the user.
@@ -84,19 +91,19 @@
   The same rules are being applied in any of the above cases, which shows how negative temperatures can come about in cases of the system being initialized in a configuration inaccessable by thermal excitation.
 
 
-  The program uses the stirling approximation by default to improve performance. 
+  The program uses the sterling approximation by default to improve performance. 
 
   A the default system with 10,000 particles completed instantaneously when only the approximation (`./levels.py -st 250`).
   
   <img src="levels/SE_approx.png">
 
-  In addition to the default, the exact value of omega can be requested with the `-x` flag. The stirling approximation will be used if an overflow error is encountered. The transition point between the two methods can be seen with the following example due to the small kink formed in the $S(E)$ curve.
+  In addition to the default, the exact value of $\Omega$ can be requested with the `-x` flag. The sterling approximation will be used if an overflow error is encountered. The transition point between the two methods can be seen with the following example due to the small kink formed in the $S(E)$ curve.
   ```
   ./levels.py -sxt 250
   Calculating S(E) curve: ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:04
  ```
   <img src="levels/SE_transition.png">
-  The following example takes longer, but by saving the percent of the population in the upper level at which the overflow error occurs, the middle portion of the curve can be run only witht he stirling approximation, only restarting exact calculations for omega after raching the complementary ratio that triggered the first overflow error.
+  The following example takes longer, but by saving the percent of the population in the upper level at which the overflow error occurs, the middle portion of the curve can be run only with the sterling approximation, only restarting exact calculations for $\Omega$ after reaching the complementary ratio that triggered the first overflow error.
 
 
   We can also see how reducing the gap between the energy levels allows the populations to approximately equalize at a lower temperature.
