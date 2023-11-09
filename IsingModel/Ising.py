@@ -48,39 +48,39 @@ def runMC(beta, N, eqSteps, mcSteps):
     return mag/(mcSteps*N*N)
 
 ## change these parameters for a smaller (faster) simulation 
-nt      = 88         #  number of temperature points
-N       = 12        #  size of the lattice, N x N
+nt      = 80         #  number of temperature points
+N       = 20       #  size of the lattice, N x N
 eqSteps = 1000       #  number of MC sweeps for equilibration
 mcSteps = 700        #  number of MC sweeps for calculation
 
-T = np.linspace(1.53, 3.28, nt); 
+T = np.linspace(1.50, 3.30, nt); 
 M = np.zeros(nt)
 
 #----------------------------------------------------------------------
 #  MAIN PART OF THE CODE
 #----------------------------------------------------------------------
 with Progress() as progress:
-    MC_progress = progress.add_task("[red]MC simulation", total=nt)
+    MC_progress = progress.add_task("[blue]MC simulation", total=nt)
     with ProcessPoolExecutor() as executor:
         MC_futures = []
         for tt in range(nt):
             beta=1.0/T[tt]
             #reduce the number of steps needed for equilibration at low temperatures
             if beta > 0.5:
-                stepModifier = 0.6
+                stepModifier = 0.50
             else:
-                stepModifier = 1
+                stepModifier = 1.30
 
             MC_futures.append(executor.submit(runMC, beta, N, int(stepModifier * eqSteps), int(stepModifier * mcSteps)))
 
-        while (n_finished := sum(future.done() for future in MC_futures)) < nt:
+        while (n_finished := sum(future.done() for future in MC_futures)) <= nt:
             progress.update(MC_progress, completed=n_finished, total=nt)
             if n_finished == nt:
                 break
     M = np.array([future.result() for future in MC_futures])
 
 plt.plot(T, abs(M), 'o', color='RoyalBlue', label='Simulation')
-plt.xlabel("Temperature (T)", fontsize=20); 
+plt.xlabel("Temperature (K)", fontsize=20); 
 plt.ylabel("Magnetization ", fontsize=20);   plt.axis('tight');
 
 plt.show()
