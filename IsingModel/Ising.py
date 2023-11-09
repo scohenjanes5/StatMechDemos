@@ -1,6 +1,8 @@
 import numpy as np
 from numpy.random import rand
 import matplotlib.pyplot as plt
+from rich.progress import track, Progress
+from concurrent.futures import ProcessPoolExecutor
 
 #2D Ising model simulation
 
@@ -43,12 +45,12 @@ def runMC(beta, N, eqSteps, mcSteps):
     for i in range(mcSteps):
         config = mcmove(config, beta)
         mag += calcMag(config)
-    return mag
+    return mag/(mcSteps*N*N)
 
 ## change these parameters for a smaller (faster) simulation 
 nt      = 88         #  number of temperature points
-N       = 8         #  size of the lattice, N x N
-eqSteps = 700        #  number of MC sweeps for equilibration
+N       = 12        #  size of the lattice, N x N
+eqSteps = 1000       #  number of MC sweeps for equilibration
 mcSteps = 700        #  number of MC sweeps for calculation
 
 T = np.linspace(1.53, 3.28, nt); 
@@ -57,22 +59,25 @@ M = np.zeros(nt)
 #----------------------------------------------------------------------
 #  MAIN PART OF THE CODE
 #----------------------------------------------------------------------
-for tt in range(nt):
-    M1 = 0
-    config = initialstate(N)
-    beta=1.0/T[tt]
-    
-    for i in range(eqSteps):         # equilibrate
-        config = mcmove(config, beta)# Monte Carlo moves
+with Progress() as progress:
+    MC_progress = progress.add_task("[red]MC simulation", total=nt)
+    with ProcessPoolExecutor() as executor:
+        MC_futures = []
+        for tt in range(nt):
+            beta=1.0/T[tt]
+            #reduce the number of steps needed for equilibration at low temperatures
+            if beta > 0.5:
+                stepModifier = 0.6
+            else:
+                stepModifier = 1
 
-    for i in range(mcSteps):
-        config = mcmove(config, beta)           
-        Mag = calcMag(config)        # calculate the magnetisation
-        M1 += Mag
+            MC_futures.append(executor.submit(runMC, beta, N, int(stepModifier * eqSteps), int(stepModifier * mcSteps)))
 
-    #Average magnetization per spin
-    M[tt] = M1 /(mcSteps*N*N) #number of configurations = number of steps * number of sites
-
+        while (n_finished := sum(future.done() for future in MC_futures)) < nt:
+            progress.update(MC_progress, completed=n_finished, total=nt)
+            if n_finished == nt:
+                break
+    M = np.array([future.result() for future in MC_futures])
 
 plt.plot(T, abs(M), 'o', color='RoyalBlue', label='Simulation')
 plt.xlabel("Temperature (T)", fontsize=20); 
