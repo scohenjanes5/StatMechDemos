@@ -50,8 +50,8 @@ def runMC(beta, N, eqSteps, mcSteps):
 ## change these parameters for a smaller (faster) simulation 
 nt      = 80         #  number of temperature points
 N       = 20       #  size of the lattice, N x N
-eqSteps = 300000       #  number of MC sweeps for equilibration
-mcSteps = 100000       #  number of MC sweeps for calculation
+eqSteps = 400000       #  number of MC sweeps for equilibration
+mcSteps = 150000       #  number of MC sweeps for calculation
 
 T = np.linspace(1.50, 3.30, nt)
 #T = np.random.normal(2.3, 0.5, nt)
@@ -68,9 +68,9 @@ with Progress() as progress:
             beta=1.0/T[tt]
             #reduce the number of steps needed for equilibration at low temperatures
             if beta > 0.5:
-                stepModifier = 0.50
+                stepModifier = 0.40
             else:
-                stepModifier = 1.30
+                stepModifier = 1.45
 
             MC_futures.append(executor.submit(runMC, beta, N, int(stepModifier * eqSteps), int(stepModifier * mcSteps)))
 
