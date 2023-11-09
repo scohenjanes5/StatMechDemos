@@ -14,19 +14,19 @@ def initialstate(N):
 
 def mcmove(config, beta):
     '''Monte Carlo move using Metropolis algorithm '''
-    for i in range(N):
-        for j in range(N):
-                #choose a random spin
-                a = np.random.randint(0, N)
-                b = np.random.randint(0, N)
-                s =  config[a, b]
-                #calculate the energy change if we flip this spin. Modulus is used for periodic boundary conditions.
-                neighbors = config[(a+1)%N,b] + config[a,(b+1)%N] + config[(a-1)%N,b] + config[a,(b-1)%N]
-                cost = 2*s*neighbors
-                #flip the spin based on the probability of the transition
-                if rand() < np.exp(-beta*cost):
-                    s *= -1
-                config[a, b] = s
+    #choose a random spin
+    a = np.random.randint(0, N)
+    b = np.random.randint(0, N)
+    s =  config[a, b]
+    #calculate the energy change if we flip this spin. Modulus is used for periodic boundary conditions.
+    neighbors = config[(a+1)%N,b] + config[a,(b+1)%N] + config[(a-1)%N,b] + config[a,(b-1)%N]
+    cost = 2*s*neighbors
+    #flip the spin based on the probability of the transition
+    if cost < 0:
+        s *= -1
+    elif rand() < np.exp(-beta*cost):
+        s *= -1
+    config[a, b] = s
     return config
 
 def calcMag(config):
@@ -50,10 +50,11 @@ def runMC(beta, N, eqSteps, mcSteps):
 ## change these parameters for a smaller (faster) simulation 
 nt      = 80         #  number of temperature points
 N       = 20       #  size of the lattice, N x N
-eqSteps = 1000       #  number of MC sweeps for equilibration
-mcSteps = 700        #  number of MC sweeps for calculation
+eqSteps = 300000       #  number of MC sweeps for equilibration
+mcSteps = 100000       #  number of MC sweeps for calculation
 
-T = np.linspace(1.50, 3.30, nt); 
+T = np.linspace(1.50, 3.30, nt)
+#T = np.random.normal(2.3, 0.5, nt)
 M = np.zeros(nt)
 
 #----------------------------------------------------------------------
