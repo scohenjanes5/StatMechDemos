@@ -18,10 +18,11 @@ def mcmove(config, beta):
     a = np.random.randint(0, N)
     b = np.random.randint(0, N)
     s =  config[a, b]
-    #calculate the energy change if we flip this spin. Modulus is used for periodic boundary conditions.
+    #calculate the interactions betwen the selected spin and neighbors. Modulus is used for periodic boundary conditions.
     neighbors = config[(a+1)%N,b] + config[a,(b+1)%N] + config[(a-1)%N,b] + config[a,(b-1)%N]
     cost = 2*s*neighbors
-    #flip the spin based on the probability of the transition
+    #flip the spin based on the probability of the transition.
+    #If unfavorable interaction, s and neighbors have opposite signs, so cost is negative.
     if cost < 0:
         s *= -1
     elif rand() < np.exp(-beta*cost):
