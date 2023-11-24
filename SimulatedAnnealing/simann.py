@@ -10,7 +10,7 @@ def LJ(r):
 
 #Function to choose new r
 def newr(r,T):
-    pururbation = np.random.uniform(-Scaling_Factor,Scaling_Factor)
+    pururbation = np.random.uniform(-nudge,nudge)
     return r + pururbation
 
 #Constants:
@@ -21,18 +21,18 @@ eps = 1
 sig = 1
 #Initial temperature:
 T = 5
-Scaling_Factor = .05
+nudge = .05
+cooling_rate = 0.99
 
 #Initial r is random:
-r = np.random.uniform(rad,2)
+r = np.random.uniform(rad,10)
 
 Energies = []
 Radii = []
-dEs = [1]
-Ts = [T]
+failures = 0
+#failure_array = []
 
-#while dEs[-1] > -1e-9:
-for i in range(10000):
+while failures < 300:
     #Calculate energy of current r:
     E = LJ(r)
     #Choose new r:
@@ -45,18 +45,20 @@ for i in range(10000):
     if dE < 0:
         r = rnew
         E = Enew
+        failures = 0
     #If dE > 0, accept new r with probability exp(-dE/T):
+    elif np.random.uniform(0,1) < np.exp(-dE/T):
+        r = rnew
+        E = Enew
+        failures = 0
     else:
-        if np.random.uniform(0,1) < np.exp(-dE/T):
-            r = rnew
-            E = Enew
+        failures += 1
     #Append energy to list:
     Energies.append(E)
     Radii.append(r)
     #Decrease temperature:
-    T *= 0.99
-    Ts.append(T)
-    dEs.append(dE)
+    T *= cooling_rate
+#    failure_array.append(failures)
 
 fig, (ax1, ax2) = plt.subplots(2, 1)
 x = np.linspace(0.95,max(r+2,5),1000)
@@ -66,4 +68,7 @@ ax1.annotate('Final Position', xy=(r,LJ(r)), textcoords='data', xytext=(2,-0.5),
 ax2.plot(Energies)
 ax2.plot(Radii)
 ax2.legend(['Energy','Radius'])
+#ax3.plot(failure_array)
+#ax3.set_xlabel('Iteration')
+#ax3.set_ylabel('Number of Failures')
 plt.show()
