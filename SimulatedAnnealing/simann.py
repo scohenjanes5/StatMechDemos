@@ -3,6 +3,18 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import argparse
+
+def get_args():
+    parser = argparse.ArgumentParser(description='Simulated Annealing of Argon Atoms.')
+    parser.add_argument('-r', '--radius', type=float, metavar='', help='Radius of Argon atom.', default=1)
+    parser.add_argument('-e', '--epsilon', type=float, metavar='', help='Lennard-Jones potential parameter.', default=1)
+    parser.add_argument('-s', '--sigma', type=float, metavar='', help='Lennard-Jones potential parameter.', default=1)
+    parser.add_argument('-t', '--temperature', type=float, metavar='', help='Initial temperature.', default=5)
+    parser.add_argument('-n', '--nudge', type=float, metavar='', help='Nudge factor.', default=0.05)
+    parser.add_argument('-c', '--cooling_rate', type=float, metavar='', help='Cooling rate.', default=0.99)
+    parser.add_argument('-i', '--initial_bounds', help='Initial bounds of r.', nargs='+', type=float, metavar='', default=[1,10]) 
+    return parser.parse_args()
 
 #Function to calculate the Lennard-Jones potential:
 def LJ(r):
@@ -13,19 +25,24 @@ def newr(r,T):
     pururbation = np.random.uniform(-nudge,nudge)
     return r + pururbation
 
+
+args = get_args()
 #Constants:
 #Radius of Argon atom:
-rad = 1
+rad = args.radius
 #Lennard-Jones potential parameters:
-eps = 1
-sig = 1
+eps = args.epsilon
+sig = args.sigma
 #Initial temperature:
-T = 5
-nudge = .05
-cooling_rate = 0.99
+T = args.temperature
+nudge = args.nudge
+cooling_rate = args.cooling_rate
 
 #Initial r is random:
-r = np.random.uniform(rad,10)
+if len(args.initial_bounds) == 1:
+    r = args.initial_bounds[0]
+else:
+    r = np.random.uniform(args.initial_bounds[0],args.initial_bounds[1])
 
 Energies = []
 Radii = []
