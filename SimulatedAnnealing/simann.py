@@ -41,8 +41,10 @@ cooling_rate = args.cooling_rate
 #Initial r is random:
 if len(args.initial_bounds) == 1:
     r = args.initial_bounds[0]
-else:
+elif len(args.initial_bounds) == 2:
     r = np.random.uniform(args.initial_bounds[0],args.initial_bounds[1])
+else:
+    raise ValueError('Initial bounds must be a list of length 1 or 2.')
 
 Energies = []
 Radii = []
