@@ -112,6 +112,12 @@ N = args.number_of_atoms
 eps = args.epsilon
 sig = args.sigma
 
+#Initial r is random:
+if len(args.initial_bounds) == 1:
+    args.initial_bounds.append(args.initial_bounds[0])
+elif len(args.initial_bounds) > 2:
+    raise ValueError('Initial bounds must be a list of length 1 or 2.')
+
 config = config(N, args.initial_bounds, rad)
 config.plot_PE_surface()
 quit()
@@ -119,13 +125,6 @@ quit()
 
 
 
-#Initial r is random:
-if len(args.initial_bounds) == 1:
-    r = args.initial_bounds[0]
-elif len(args.initial_bounds) == 2:
-    r = np.random.uniform(args.initial_bounds[0],args.initial_bounds[1])
-else:
-    raise ValueError('Initial bounds must be a list of length 1 or 2.')
 
 Energies = []
 Radii = []
