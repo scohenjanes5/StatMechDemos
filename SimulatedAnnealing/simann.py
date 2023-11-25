@@ -6,38 +6,58 @@ import matplotlib.pyplot as plt
 import argparse
 
 class atom:
-    def __init__(self, x, y, z, rad):
-        self.coords = np.array([x,y,z])
+    def __init__(self, coords, rad, cartesian=True):
+        if cartesian == True:
+            self.coords = np.array(coords)
+        else:
+            self.coords = self.polar_to_cartesian(coords)
         self.rad = rad
 
+    def polar_to_cartesian(self, coords):
+        #Converts polar coordinates to cartesian coordinates.
+        r = coords[0]
+        theta = coords[1]
+        phi = coords[2]
+
+        x = r*np.sin(phi)*np.cos(theta)
+        y = r*np.sin(phi)*np.sin(theta)
+        z = r*np.cos(phi)
+        return np.array([x,y,z])
+
+    def nudge(self, nudge, angles):
+        #Nudges the atom by a random amount.
+        theta, phi = angles
+        purt_vector = self.polar_to_cartesian([nudge, theta, phi])
+        self.coords = purt_vector + self.coords
+
 class config:
-    def __init__(self, n, bounds, rad):
+    def __init__(self, n, bounds, rad, T):
         self.n = n
         self.bounds = bounds
         self.atoms = self.random_start(rad)
-        self.E = self.config_E() 
+        self.E = self.config_E()
+        self.T = T
+        self.Energy_array = []
+
+    def random_angles(self):
+        if self.n > 2:
+            theta = np.random.uniform(0,2*np.pi)
+        else:
+            theta = 0 #dimer aligned along x-axis
+
+        if self.n > 3:
+            phi = np.random.uniform(0,np.pi)
+        else:
+            phi = np.pi/2 #dimer and trimer in x-y plane
+        return theta, phi
 
     def random_start(self, rad):
-        atoms = [atom(0,0,0,rad)]
+        atoms = [atom([0,0,0], rad)]
         for i in range(1,self.n):
-            #pick random r, theta, phi:
             r = np.random.uniform(max(self.bounds[0],rad), self.bounds[1])
-
-            if self.n > 2:
-                theta = np.random.uniform(0,2*np.pi)
-            else:
-                theta = 0 #dimer aligned along x-axis
-
-            if self.n > 3:
-                phi = np.random.uniform(0,np.pi)
-            else:
-                phi = np.pi/2 #dimer and trimer in x-y plane
-
-            #convert to cartesian coordinates:
-            x = r*np.sin(phi)*np.cos(theta)
-            y = r*np.sin(phi)*np.sin(theta)
-            z = r*np.cos(phi)
-            atoms.append(atom(x,y,z,rad))
+            theta, phi = self.random_angles()
+            coords = [r, theta, phi]
+            atoms.append(atom(coords, rad, cartesian=False))
         return atoms
 
     def LJ(self, r):
@@ -64,6 +84,40 @@ class config:
             E += self.LJ(r)
         return E
 
+    def anneal(self):
+        failures = 0
+        Energy = []
+        while failures < self.n*250:
+            failures = self.step(failures)
+            Energy.append(self.E)
+        self.Energy_array = Energy
+
+    def step(self, failures):
+        for atom in self.atoms:
+            #Calculate energy of current configuration:
+            E = self.config_E()
+            current_coords = atom.coords
+            #Nudge atom:
+            angles = self.random_angles()
+            atom.nudge(nudge, angles)
+            #Calculate energy of new configuration:
+            Enew = self.config_E()
+            #Calculate change in energy:
+            dE = Enew - E
+            #If dE < 0, accept new r:
+            if dE < 0:
+                failures = 0
+            #If dE > 0, accept new r with probability exp(-dE/T):
+            elif np.random.uniform(0,1) < np.exp(-dE/self.T):
+                failures = 0
+            else:
+                #If new r is rejected, revert to old r:
+                atom.coords = current_coords
+                failures += 1
+        #Decrease temperature:
+        self.T *= cooling_rate
+        return failures
+
     def plot_PE_surface(self):
         #Create grid of points:
         x = np.linspace(-self.bounds[1], self.bounds[1],100)
@@ -74,7 +128,6 @@ class config:
         for i in range(100):
             for j in range(100):
                 Z[i,j] = self.field(np.array([X[i,j],Y[i,j],0]))
-        #Plot:
         plt.scatter(X,Y,c=np.log(abs(Z)),cmap='viridis')
         plt.colorbar()
         plt.show()
@@ -83,6 +136,22 @@ class config:
         #ax.plot_surface(X, Y, Z)
         #plt.show()
 
+        #Plot potential energy surface and total energy vs number of steps in different subplots:
+#        fig, (ax1, ax2) = plt.subplots(1,2)
+#        scatter = ax1.scatter(X,Y,c=np.log(abs(Z)),cmap='viridis')
+#        fig.colorbar(scatter, ax=ax1)
+#        ax2.plot(self.Energy_array)
+#        plt.show()
+
+    def create_xyz_file(self):
+        #Create xyz file of current configuration:
+        with open('config.xyz', 'w') as f:
+            f.write(str(self.n) + '\n')
+            f.write('Atoms. T = ' + str(self.T) + '\n')
+            for atom in self.atoms:
+                f.write('Ar ' + str(atom.coords[0]) + ' ' + str(atom.coords[1]) + ' ' + str(atom.coords[2]) + '\n')
+
+    
 def get_args():
     parser = argparse.ArgumentParser(description='Simulated Annealing of Argon Atoms.')
     parser.add_argument('-r', '--radius', type=float, metavar='', help='Radius of Argon atom.', default=1)
@@ -94,12 +163,6 @@ def get_args():
     parser.add_argument('-i', '--initial_bounds', help='Initial bounds of r.', nargs='+', type=float, metavar='', default=[1,10])
     parser.add_argument('-N', '--number_of_atoms', type=int, metavar='', help='Number of atoms.', default=2)
     return parser.parse_args()
-
-
-#Function to choose new r
-def newr(r,T):
-    pururbation = np.random.uniform(-nudge,nudge)
-    return r + pururbation
 
 args = get_args()
 #Constants:
@@ -118,52 +181,9 @@ if len(args.initial_bounds) == 1:
 elif len(args.initial_bounds) > 2:
     raise ValueError('Initial bounds must be a list of length 1 or 2.')
 
-config = config(N, args.initial_bounds, rad)
+config = config(N, args.initial_bounds, rad, T)
+config.anneal()
 config.plot_PE_surface()
-quit()
+config.create_xyz_file()
 
 
-
-
-
-Energies = []
-Radii = []
-failures = 0
-
-while failures < 300:
-    #Calculate energy of current r:
-    E = LJ(r)
-    #Choose new r:
-    rnew = newr(r,T)
-    #Calculate energy of new r:
-    Enew = LJ(rnew)
-    #Calculate change in energy:
-    dE = Enew - E
-    #If dE < 0, accept new r:
-    if dE < 0:
-        r = rnew
-        E = Enew
-        failures = 0
-    #If dE > 0, accept new r with probability exp(-dE/T):
-    elif np.random.uniform(0,1) < np.exp(-dE/T):
-        r = rnew
-        E = Enew
-        failures = 0
-    else:
-        failures += 1
-    #Append energy to list:
-    Energies.append(E)
-    Radii.append(r)
-    #Decrease temperature:
-    T *= cooling_rate
-#    failure_array.append(failures)
-
-fig, (ax1, ax2) = plt.subplots(2, 1)
-x = np.linspace(0.95,max(r+2,5),1000)
-ax1.plot(x,LJ(x))
-ax1.scatter(r,LJ(r))
-ax1.annotate('Final Position', xy=(r,LJ(r)), textcoords='data', xytext=(2,-0.5), arrowprops=dict(arrowstyle="->",connectionstyle="arc3"))
-ax2.plot(Energies)
-ax2.plot(Radii)
-ax2.legend(['Energy','Radius'])
-plt.show()
