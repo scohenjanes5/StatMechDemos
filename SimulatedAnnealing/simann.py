@@ -38,6 +38,7 @@ class config:
         self.E = self.config_E()
         self.T = T
         self.Energy_array = []
+        self.failures = 0
 
     def random_angles(self):
         if self.n > 2:
@@ -85,15 +86,12 @@ class config:
         return E
 
     def anneal(self):
-        failures = 0
-        Energy = []
-        while failures < self.n*250:
-            failures = self.step(failures)
-            Energy.append(self.E)
-        self.Energy_array = Energy
+        while self.failures < self.n*250:
+            self.step()
+            self.Energy_array.append(self.E)
         self.center_on_origin()
 
-    def step(self, failures):
+    def step(self):
         for atom in self.atoms:
             #Calculate energy of current configuration:
             E = self.config_E()
@@ -107,17 +105,16 @@ class config:
             dE = Enew - E
             #If dE < 0, accept new r:
             if dE < 0:
-                failures = 0
+                self.failures = 0
             #If dE > 0, accept new r with probability exp(-dE/T):
             elif np.random.uniform(0,1) < np.exp(-dE/self.T):
-                failures = 0
+                self.failures = 0
             else:
                 #If new r is rejected, revert to old r:
                 atom.coords = current_coords
-                failures += 1
+                self.failures += 1
         #Decrease temperature:
         self.T *= cooling_rate
-        return failures
 
     def center_on_origin(self):
         #Center configuration on origin:
