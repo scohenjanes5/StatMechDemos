@@ -91,6 +91,7 @@ class config:
             failures = self.step(failures)
             Energy.append(self.E)
         self.Energy_array = Energy
+        self.center_on_origin()
 
     def step(self, failures):
         for atom in self.atoms:
@@ -117,6 +118,15 @@ class config:
         #Decrease temperature:
         self.T *= cooling_rate
         return failures
+
+    def center_on_origin(self):
+        #Center configuration on origin:
+        center = np.zeros(3)
+        for atom in self.atoms:
+            center += atom.coords
+        center /= self.n
+        for atom in self.atoms:
+            atom.coords -= center
 
     def plot_PE_surface(self):
         #Create grid of points:
