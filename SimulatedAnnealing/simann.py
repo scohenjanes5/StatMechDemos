@@ -167,7 +167,7 @@ def get_args():
     parser.add_argument('-t', '--temperature', type=float, metavar='', help='Initial temperature.', default=5)
     parser.add_argument('-n', '--nudge', type=float, metavar='', help='Nudge factor.', default=0.05)
     parser.add_argument('-c', '--cooling_rate', type=float, metavar='', help='Cooling rate.', default=0.99)
-    parser.add_argument('-i', '--initial_bounds', help='Initial bounds of r.', nargs='+', type=float, metavar='', default=[1,10])
+    parser.add_argument('-i', '--initial_bounds', help='Initial bounds of r.', nargs='+', type=float, metavar='', default=[1,3])
     parser.add_argument('-N', '--number_of_atoms', type=int, metavar='', help='Number of atoms.', default=2)
     return parser.parse_args()
 
@@ -193,5 +193,4 @@ config.anneal()
 #config.plot_PE_surface()
 config.plot_3D()
 config.create_xyz_file()
-
 
