@@ -4,6 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+import matplotlib.animation as animation
 
 class atom:
     def __init__(self, coords, rad, cartesian=True):
@@ -39,6 +40,10 @@ class config:
         self.T = T
         self.Energy_array = []
         self.failures = 0
+        #self.fig = plt.figure()
+        #self.ax = self.fig.add_subplot(projection='3d')
+        #self.scatter = self.ax.scatter3D(*zip(*[atom.coords for atom in self.atoms]), c='b', s=400)
+        #self.ani = animation.FuncAnimation(self.fig, self.update, interval=300, blit=False)
 
     def random_angles(self):
         if self.n > 2:
@@ -147,6 +152,16 @@ class config:
             ax.scatter(atom.coords[0], atom.coords[1], atom.coords[2], c='b', s=400)
         plt.show()
 
+    def animate_3D(self):
+        plt.show()
+
+    def update(self,frame):
+        if self.failures < self.n*250:
+            self.step()
+            self.center_on_origin()
+            x, y, z = zip(*[atom.coords for atom in self.atoms])
+            self.scatter._offsets3d = (x, y, z)
+
     def create_xyz_file(self):
         #Create xyz file of current configuration:
         with open('config.xyz', 'w') as f:
@@ -189,5 +204,6 @@ config = config(N, args.initial_bounds, rad, T)
 config.anneal()
 #config.plot_PE_surface()
 config.plot_3D()
-config.create_xyz_file()
+#config.animate_3D()
+#config.create_xyz_file()
 
