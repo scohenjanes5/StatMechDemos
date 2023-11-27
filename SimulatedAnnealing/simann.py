@@ -131,17 +131,14 @@ class config:
         plt.scatter(X,Y,c=np.log(abs(Z)),cmap='viridis')
         plt.colorbar()
         plt.show()
-        #fig = plt.figure()
-        #ax = fig.add_subplot(111, projection='3d')
-        #ax.plot_surface(X, Y, Z)
-        #plt.show()
 
-        #Plot potential energy surface and total energy vs number of steps in different subplots:
-#        fig, (ax1, ax2) = plt.subplots(1,2)
-#        scatter = ax1.scatter(X,Y,c=np.log(abs(Z)),cmap='viridis')
-#        fig.colorbar(scatter, ax=ax1)
-#        ax2.plot(self.Energy_array)
-#        plt.show()
+    def plot_3D(self):
+        #Plot 3D configuration:
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        for atom in self.atoms:
+            ax.scatter(atom.coords[0], atom.coords[1], atom.coords[2], c='b', s=400)
+        plt.show()
 
     def create_xyz_file(self):
         #Create xyz file of current configuration:
@@ -183,7 +180,8 @@ elif len(args.initial_bounds) > 2:
 
 config = config(N, args.initial_bounds, rad, T)
 config.anneal()
-config.plot_PE_surface()
+#config.plot_PE_surface()
+config.plot_3D()
 config.create_xyz_file()
 
 
