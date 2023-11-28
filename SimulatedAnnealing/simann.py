@@ -207,3 +207,14 @@ else:
 config.plot_3D()
 config.create_xyz_file()
 
+#To appreciate the power of the simulated annealing method, find the minimum energy geometry of clusers with 3, 4 and 13 argon atoms and report the values of the minimum energy. For the cluster with 13 atoms run the program with three different initial temperatures, 10 K, 20 K and 30 K. Compare the final results. Do the final energy and geometry depend on the initial temperature? Why, or why not?
+
+#The final structures and energies are the same, since all of these temperatures are sufficiently high to explore the entire configuration space before the temperature approaches zero.
+
+#How would you compute a thermodynamic average at a fixed temperature T using the program for simulating annealing?
+
+#I would make repeated measurements after an initial equilibration period, then average the results.
+
+#Compute the radial distribution function g(r) for the cluster and compare it to the g(r) of a fluid of argon atoms at constant T,N,V by using periodic boundary conditions.
+#The rdf is a spike for the cluster, and close to uniform for the fluid.
+
