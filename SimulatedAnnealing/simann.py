@@ -4,6 +4,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
+from rich import progress
 
 class atom:
     def __init__(self, coords, rad, cartesian=True):
@@ -31,7 +32,7 @@ class atom:
         self.coords = purt_vector + self.coords
 
 class config:
-    def __init__(self, n, bounds, rad, T):
+    def __init__(self, n, bounds, rad, T, filename='config.xyz', periodic=False):
         self.n = n
         self.bounds = bounds
         self.atoms = self.random_start(rad)
@@ -39,6 +40,8 @@ class config:
         self.T = T
         self.Energy_array = []
         self.failures = 0
+        self.filename = filename
+        self.periodic = periodic
 
     def random_angles(self):
         if self.n > 2:
@@ -91,6 +94,11 @@ class config:
             self.Energy_array.append(self.E)
         self.center_on_origin()
 
+    def simulate_fluid(self):
+        for _ in progress.track(range(10000), description='Simulating fluid...'):
+            self.step()
+            self.Energy_array.append(self.E)
+
     def step(self):
         for atom in self.atoms:
             #Calculate energy of current configuration:
@@ -99,6 +107,13 @@ class config:
             #Nudge atom:
             angles = self.random_angles()
             atom.nudge(nudge, angles)
+            #Check if new configuration is within bounds:
+            if self.periodic:
+                for i in range(3):
+                    if atom.coords[i] > self.bounds[1]:
+                        atom.coords[i] -= 2*self.bounds[1]
+                    elif atom.coords[i] < self.bounds[0]:
+                        atom.coords[i] += 2*self.bounds[1]
             #Calculate energy of new configuration:
             Enew = self.config_E()
             #Calculate change in energy:
@@ -113,8 +128,9 @@ class config:
                 #If new r is rejected, revert to old r:
                 atom.coords = current_coords
                 self.failures += 1
-        #Decrease temperature:
-        self.T *= cooling_rate
+        #Decrease temperature if not periodic:
+        if not self.periodic:
+            self.T *= cooling_rate
 
     def center_on_origin(self):
         #Center configuration on origin:
@@ -149,13 +165,12 @@ class config:
 
     def create_xyz_file(self):
         #Create xyz file of current configuration:
-        with open('config.xyz', 'w') as f:
+        with open(self.filename, 'w') as f:
             f.write(str(self.n) + '\n')
             f.write('Atoms. T = ' + str(self.T) + '\n')
             for atom in self.atoms:
                 f.write('Ar ' + str(atom.coords[0]) + ' ' + str(atom.coords[1]) + ' ' + str(atom.coords[2]) + '\n')
 
-    
 def get_args():
     parser = argparse.ArgumentParser(description='Simulated Annealing of Argon Atoms.')
     parser.add_argument('-r', '--radius', type=float, metavar='', help='Radius of Argon atom.', default=1)
@@ -166,27 +181,28 @@ def get_args():
     parser.add_argument('-c', '--cooling_rate', type=float, metavar='', help='Cooling rate.', default=0.99)
     parser.add_argument('-i', '--initial_bounds', help='Initial bounds of r.', nargs='+', type=float, metavar='', default=[1,3])
     parser.add_argument('-N', '--number_of_atoms', type=int, metavar='', help='Number of atoms.', default=2)
+    parser.add_argument('-f', '--filename', type=str, metavar='', help='Name of xyz file.', default='config.xyz')
+    parser.add_argument('-p', '--periodic', action='store_true', help='Periodic boundary conditions.')
     return parser.parse_args()
 
 args = get_args()
 #Constants:
-rad = args.radius
-T = args.temperature
 nudge = args.nudge
 cooling_rate = args.cooling_rate
-N = args.number_of_atoms
 #Lennard-Jones potential parameters:
 eps = args.epsilon
 sig = args.sigma
 
-#Initial r is random:
 if len(args.initial_bounds) == 1:
     args.initial_bounds.append(args.initial_bounds[0])
 elif len(args.initial_bounds) > 2:
     raise ValueError('Initial bounds must be a list of length 1 or 2.')
 
-config = config(N, args.initial_bounds, rad, T)
-config.anneal()
+config = config(args.number_of_atoms, args.initial_bounds, args.radius, args.temperature, args.filename, args.periodic)
+if args.periodic:
+    config.simulate_fluid()
+else:
+    config.anneal()
 #config.plot_PE_surface()
 config.plot_3D()
 config.create_xyz_file()
