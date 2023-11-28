@@ -101,6 +101,7 @@ class config:
 
     def step(self):
         for atom in self.atoms:
+            old_f = self.failures
             #Calculate energy of current configuration:
             E = self.config_E()
             current_coords = atom.coords
@@ -129,7 +130,7 @@ class config:
                 atom.coords = current_coords
                 self.failures += 1
         #Decrease temperature if not periodic:
-        if not self.periodic:
+        if not self.periodic or self.failures > old_f:
             self.T *= cooling_rate
 
     def center_on_origin(self):
