@@ -212,6 +212,19 @@ class config:
             f.write('Atoms. T = ' + str(self.T) + '\n')
             for atom in self.atoms:
                 f.write('Ar ' + str(atom.coords[0]) + ' ' + str(atom.coords[1]) + ' ' + str(atom.coords[2]) + '\n')
+    def plot_cycle_stats(self):
+        #Plot energy vs. cycle number and temperature vs. cycle number and dE vs. cycle number
+        fig, ax = plt.subplots(3,1)
+        ax[0].plot(self.Energy_array)
+        ax[0].set_xlabel('Cycle number')
+        ax[0].set_ylabel('Energy')
+        ax[1].plot(self.T_array)
+        ax[1].set_xlabel('Cycle number')
+        ax[1].set_ylabel('Temperature')
+        ax[2].plot(self.dE_array)
+        ax[2].set_xlabel('Cycle number')
+        ax[2].set_ylabel('dE')
+        plt.show()
 
 def get_args():
     parser = argparse.ArgumentParser(description='Simulated Annealing of Argon Atoms.')
@@ -225,6 +238,8 @@ def get_args():
     parser.add_argument('-N', '--number_of_atoms', type=int, metavar='', help='Number of atoms.', default=2)
     parser.add_argument('-f', '--filename', type=str, metavar='', help='Name of xyz file.', default='config.xyz')
     parser.add_argument('-p', '--periodic', action='store_true', help='Periodic boundary conditions.')
+    parser.add_argument('-C', '--cycles', type=int, metavar='', help='Number of cycles.', default=10)
+    parser.add_argument('-P', '--plot', action='store_true', help='Plot energy vs. cycle number and temperature vs. cycle number and dE vs. cycle number.')
     return parser.parse_args()
 
 args = get_args()
@@ -240,7 +255,7 @@ if len(args.initial_bounds) == 1:
 elif len(args.initial_bounds) > 2:
     raise ValueError('Initial bounds must be a list of length 1 or 2.')
 
-config = config(args.number_of_atoms, args.initial_bounds, args.radius, args.temperature, args.filename, args.periodic)
+config = config(args.number_of_atoms, args.initial_bounds, args.radius, args.temperature, args.filename, args.periodic, args.cycles)
 if args.periodic:
     config.simulate_fluid()
 else:
@@ -248,19 +263,8 @@ else:
 #config.plot_PE_surface()
 config.plot_3D()
 config.create_xyz_file()
-
-#plot energy vs. cycle number and temperature vs. cycle number and dE vs. cycle number
-fig, ax = plt.subplots(3,1)
-ax[0].plot(config.Energy_array)
-ax[0].set_xlabel('Cycle number')
-ax[0].set_ylabel('Energy')
-ax[1].plot(config.T_array)
-ax[1].set_xlabel('Cycle number')
-ax[1].set_ylabel('Temperature')
-ax[2].plot(config.dE_array)
-ax[2].set_xlabel('Cycle number')
-ax[2].set_ylabel('dE')
-plt.show()
+if args.plot:
+    config.plot_cycle_stats()
 
 #To appreciate the power of the simulated annealing method, find the minimum energy geometry of clusers with 3, 4 and 13 argon atoms and report the values of the minimum energy. For the cluster with 13 atoms run the program with three different initial temperatures, 10 K, 20 K and 30 K. Compare the final results. Do the final energy and geometry depend on the initial temperature? Why, or why not?
 
