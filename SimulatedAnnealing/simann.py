@@ -42,12 +42,15 @@ class config:
         self.atoms = self.random_start(rad)
         self.E = self.config_E()
         self.T = T
+        self.Energy_minima_array = []
         self.Energy_array = []
         self.failures = 0
         self.filename = filename
         self.periodic = periodic
         self.cycles = num_cycles
         self.cooling = True
+        self.T_array = []
+        self.dE_array = []
 
     def random_angles(self):
         if self.n > 2:
@@ -98,21 +101,29 @@ class config:
         initial_T = self.T
         for _ in progress.track(range(self.cycles), description='Annealing...'):
             while self.failures < self.n*200:
+                oldE = self.E
                 self.step()
+                self.dE_array.append(self.E - oldE)
+                self.Energy_array.append(self.E)
+                self.T_array.append(self.T)
             self.center_on_origin()
-            self.Energy_array.append(self.E)
+            self.Energy_minima_array.append(self.E)
             for atom in self.atoms:
                 atom.save_coords()
             self.cooling = False
             #Start warming:
             while self.T < initial_T:
+                oldE = self.E
                 self.step()
+                self.dE_array.append(self.E - oldE)
+                self.Energy_array.append(self.E)
+                self.T_array.append(self.T)
             self.cooling = True
         print('Annealing complete. Finding minimum energy configuration...')
         #the index of the minimum energy configuration:
-        min_index = np.argmin(self.Energy_array)
-        print(f'Minimum energy: {self.Energy_array[min_index]} is at index {min_index}.')
-        print(f"All energies: {self.Energy_array}")
+        min_index = np.argmin(self.Energy_minima_array)
+        print(f'Minimum energy: {self.Energy_minima_array[min_index]} is at index {min_index}')
+        print(f"All energies: {self.Energy_minima_array}")
         #the minimum energy configuration:
         min_config = self.atoms
         for atom in min_config:
@@ -160,6 +171,8 @@ class config:
                 self.T *= cooling_rate
         else:
             self.T /= cooling_rate
+        #Recalculate energy:
+        self.E = self.config_E()
 
     def center_on_origin(self):
         #Center configuration on origin:
@@ -235,6 +248,19 @@ else:
 #config.plot_PE_surface()
 config.plot_3D()
 config.create_xyz_file()
+
+#plot energy vs. cycle number and temperature vs. cycle number and dE vs. cycle number
+fig, ax = plt.subplots(3,1)
+ax[0].plot(config.Energy_array)
+ax[0].set_xlabel('Cycle number')
+ax[0].set_ylabel('Energy')
+ax[1].plot(config.T_array)
+ax[1].set_xlabel('Cycle number')
+ax[1].set_ylabel('Temperature')
+ax[2].plot(config.dE_array)
+ax[2].set_xlabel('Cycle number')
+ax[2].set_ylabel('dE')
+plt.show()
 
 #To appreciate the power of the simulated annealing method, find the minimum energy geometry of clusers with 3, 4 and 13 argon atoms and report the values of the minimum energy. For the cluster with 13 atoms run the program with three different initial temperatures, 10 K, 20 K and 30 K. Compare the final results. Do the final energy and geometry depend on the initial temperature? Why, or why not?
 
