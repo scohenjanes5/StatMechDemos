@@ -119,11 +119,11 @@ class config:
                 self.Energy_array.append(self.E)
                 self.T_array.append(self.T)
             self.cooling = True
-        print('Annealing complete. Finding minimum energy configuration...')
+        #print('Annealing complete. Finding minimum energy configuration...')
         #the index of the minimum energy configuration:
         min_index = np.argmin(self.Energy_minima_array)
-        print(f'Minimum energy: {self.Energy_minima_array[min_index]} is at index {min_index}')
-        print(f"All energies: {self.Energy_minima_array}")
+        #print(f'Minimum energy: {self.Energy_minima_array[min_index]} is at index {min_index}')
+        #print(f"All energies: {self.Energy_minima_array}")
         #the minimum energy configuration:
         min_config = self.atoms
         for atom in min_config:
