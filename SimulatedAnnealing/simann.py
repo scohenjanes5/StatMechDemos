@@ -139,7 +139,8 @@ class config:
         for atom in self.atoms:
             old_f = self.failures
             #Calculate energy of current configuration:
-            E = self.config_E()
+            if not self.periodic:
+                E = self.config_E()
             current_coords = atom.coords
             #Nudge atom:
             angles = self.random_angles()
@@ -152,9 +153,14 @@ class config:
                     elif atom.coords[i] < self.bounds[0]:
                         atom.coords[i] += 2*self.bounds[1]
             #Calculate energy of new configuration:
-            Enew = self.config_E()
-            #Calculate change in energy:
-            dE = Enew - E
+            if not self.periodic:
+                Enew = self.config_E()
+                #Calculate change in energy:
+                dE = Enew - E
+            else:
+                dE = -1
+                #automatically accept new configuration if periodic,
+                #because we use high T and LJ is insignificant
             #If dE < 0, accept new r:
             if dE < 0:
                 self.failures = 0
