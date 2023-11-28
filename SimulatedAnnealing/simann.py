@@ -13,6 +13,7 @@ class atom:
         else:
             self.coords = self.polar_to_cartesian(coords)
         self.rad = rad
+        self.coords_array = []
 
     def polar_to_cartesian(self, coords):
         #Converts polar coordinates to cartesian coordinates.
@@ -31,8 +32,11 @@ class atom:
         purt_vector = self.polar_to_cartesian([nudge, theta, phi])
         self.coords = purt_vector + self.coords
 
+    def save_coords(self):
+        self.coords_array.append(self.coords)
+
 class config:
-    def __init__(self, n, bounds, rad, T, filename='config.xyz', periodic=False):
+    def __init__(self, n, bounds, rad, T, filename='config.xyz', periodic=False, num_cycles=10):
         self.n = n
         self.bounds = bounds
         self.atoms = self.random_start(rad)
@@ -42,6 +46,8 @@ class config:
         self.failures = 0
         self.filename = filename
         self.periodic = periodic
+        self.cycles = num_cycles
+        self.cooling = True
 
     def random_angles(self):
         if self.n > 2:
@@ -89,10 +95,29 @@ class config:
         return E
 
     def anneal(self):
-        while self.failures < self.n*250:
-            self.step()
+        initial_T = self.T
+        for _ in progress.track(range(self.cycles), description='Annealing...'):
+            while self.failures < self.n*200:
+                self.step()
+            self.center_on_origin()
             self.Energy_array.append(self.E)
-        self.center_on_origin()
+            for atom in self.atoms:
+                atom.save_coords()
+            self.cooling = False
+            #Start warming:
+            while self.T < initial_T:
+                self.step()
+            self.cooling = True
+        print('Annealing complete. Finding minimum energy configuration...')
+        #the index of the minimum energy configuration:
+        min_index = np.argmin(self.Energy_array)
+        print(f'Minimum energy: {self.Energy_array[min_index]} is at index {min_index}.')
+        print(f"All energies: {self.Energy_array}")
+        #the minimum energy configuration:
+        min_config = self.atoms
+        for atom in min_config:
+            atom.coords = atom.coords_array[min_index]
+        self.atoms = min_config
 
     def simulate_fluid(self):
         for _ in progress.track(range(10000), description='Simulating fluid...'):
@@ -130,8 +155,11 @@ class config:
                 atom.coords = current_coords
                 self.failures += 1
         #Decrease temperature if not periodic:
-        if not self.periodic or self.failures > old_f:
-            self.T *= cooling_rate
+        if self.cooling:
+            if not self.periodic or self.failures > old_f:
+                self.T *= cooling_rate
+        else:
+            self.T /= cooling_rate
 
     def center_on_origin(self):
         #Center configuration on origin:
