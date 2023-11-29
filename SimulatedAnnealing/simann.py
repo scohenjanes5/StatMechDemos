@@ -13,6 +13,7 @@ class atom:
         else:
             self.coords = self.polar_to_cartesian(coords)
         self.rad = rad
+        self.coords_array = []
 
     def polar_to_cartesian(self, coords):
         #Converts polar coordinates to cartesian coordinates.
@@ -31,17 +32,25 @@ class atom:
         purt_vector = self.polar_to_cartesian([nudge, theta, phi])
         self.coords = purt_vector + self.coords
 
+    def save_coords(self):
+        self.coords_array.append(self.coords)
+
 class config:
-    def __init__(self, n, bounds, rad, T, filename='config.xyz', periodic=False):
+    def __init__(self, n, bounds, rad, T, filename='config.xyz', periodic=False, num_cycles=10):
         self.n = n
         self.bounds = bounds
         self.atoms = self.random_start(rad)
         self.E = self.config_E()
         self.T = T
+        self.Energy_minima_array = []
         self.Energy_array = []
         self.failures = 0
         self.filename = filename
         self.periodic = periodic
+        self.cycles = num_cycles
+        self.cooling = True
+        self.T_array = []
+        self.dE_array = []
 
     def random_angles(self):
         if self.n > 2:
@@ -89,10 +98,37 @@ class config:
         return E
 
     def anneal(self):
-        while self.failures < self.n*250:
-            self.step()
-            self.Energy_array.append(self.E)
-        self.center_on_origin()
+        initial_T = self.T
+        for _ in progress.track(range(self.cycles), description='Annealing...'):
+            while self.failures < self.n*200:
+                oldE = self.E
+                self.step()
+                self.dE_array.append(self.E - oldE)
+                self.Energy_array.append(self.E)
+                self.T_array.append(self.T)
+            self.center_on_origin()
+            self.Energy_minima_array.append(self.E)
+            for atom in self.atoms:
+                atom.save_coords()
+            self.cooling = False
+            #Start warming:
+            while self.T < initial_T:
+                oldE = self.E
+                self.step()
+                self.dE_array.append(self.E - oldE)
+                self.Energy_array.append(self.E)
+                self.T_array.append(self.T)
+            self.cooling = True
+        #print('Annealing complete. Finding minimum energy configuration...')
+        #the index of the minimum energy configuration:
+        min_index = np.argmin(self.Energy_minima_array)
+        #print(f'Minimum energy: {self.Energy_minima_array[min_index]} is at index {min_index}')
+        #print(f"All energies: {self.Energy_minima_array}")
+        #the minimum energy configuration:
+        min_config = self.atoms
+        for atom in min_config:
+            atom.coords = atom.coords_array[min_index]
+        self.atoms = min_config
 
     def simulate_fluid(self):
         for _ in progress.track(range(10000), description='Simulating fluid...'):
@@ -103,7 +139,8 @@ class config:
         for atom in self.atoms:
             old_f = self.failures
             #Calculate energy of current configuration:
-            E = self.config_E()
+            if not self.periodic:
+                E = self.config_E()
             current_coords = atom.coords
             #Nudge atom:
             angles = self.random_angles()
@@ -116,9 +153,14 @@ class config:
                     elif atom.coords[i] < self.bounds[0]:
                         atom.coords[i] += 2*self.bounds[1]
             #Calculate energy of new configuration:
-            Enew = self.config_E()
-            #Calculate change in energy:
-            dE = Enew - E
+            if not self.periodic:
+                Enew = self.config_E()
+                #Calculate change in energy:
+                dE = Enew - E
+            else:
+                dE = -1
+                #automatically accept new configuration if periodic,
+                #because we use high T and LJ is insignificant
             #If dE < 0, accept new r:
             if dE < 0:
                 self.failures = 0
@@ -130,8 +172,13 @@ class config:
                 atom.coords = current_coords
                 self.failures += 1
         #Decrease temperature if not periodic:
-        if not self.periodic or self.failures > old_f:
-            self.T *= cooling_rate
+        if self.cooling:
+            if not self.periodic or self.failures > old_f:
+                self.T *= cooling_rate
+        else:
+            self.T /= cooling_rate
+        #Recalculate energy:
+        self.E = self.config_E()
 
     def center_on_origin(self):
         #Center configuration on origin:
@@ -171,6 +218,19 @@ class config:
             f.write('Atoms. T = ' + str(self.T) + '\n')
             for atom in self.atoms:
                 f.write('Ar ' + str(atom.coords[0]) + ' ' + str(atom.coords[1]) + ' ' + str(atom.coords[2]) + '\n')
+    def plot_cycle_stats(self):
+        #Plot energy vs. cycle number and temperature vs. cycle number and dE vs. cycle number
+        fig, ax = plt.subplots(3,1)
+        ax[0].plot(self.Energy_array)
+        ax[0].set_xlabel('Cycle number')
+        ax[0].set_ylabel('Energy')
+        ax[1].plot(self.T_array)
+        ax[1].set_xlabel('Cycle number')
+        ax[1].set_ylabel('Temperature')
+        ax[2].plot(self.dE_array)
+        ax[2].set_xlabel('Cycle number')
+        ax[2].set_ylabel('dE')
+        plt.show()
 
 def get_args():
     parser = argparse.ArgumentParser(description='Simulated Annealing of Argon Atoms.')
@@ -184,6 +244,8 @@ def get_args():
     parser.add_argument('-N', '--number_of_atoms', type=int, metavar='', help='Number of atoms.', default=2)
     parser.add_argument('-f', '--filename', type=str, metavar='', help='Name of xyz file.', default='config.xyz')
     parser.add_argument('-p', '--periodic', action='store_true', help='Periodic boundary conditions.')
+    parser.add_argument('-C', '--cycles', type=int, metavar='', help='Number of cycles.', default=10)
+    parser.add_argument('-P', '--plot', action='store_true', help='Plot energy vs. cycle number and temperature vs. cycle number and dE vs. cycle number.')
     return parser.parse_args()
 
 args = get_args()
@@ -199,7 +261,7 @@ if len(args.initial_bounds) == 1:
 elif len(args.initial_bounds) > 2:
     raise ValueError('Initial bounds must be a list of length 1 or 2.')
 
-config = config(args.number_of_atoms, args.initial_bounds, args.radius, args.temperature, args.filename, args.periodic)
+config = config(args.number_of_atoms, args.initial_bounds, args.radius, args.temperature, args.filename, args.periodic, args.cycles)
 if args.periodic:
     config.simulate_fluid()
 else:
@@ -207,6 +269,8 @@ else:
 #config.plot_PE_surface()
 config.plot_3D()
 config.create_xyz_file()
+if args.plot:
+    config.plot_cycle_stats()
 
 #To appreciate the power of the simulated annealing method, find the minimum energy geometry of clusers with 3, 4 and 13 argon atoms and report the values of the minimum energy. For the cluster with 13 atoms run the program with three different initial temperatures, 10 K, 20 K and 30 K. Compare the final results. Do the final energy and geometry depend on the initial temperature? Why, or why not?
 
