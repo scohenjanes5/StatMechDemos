@@ -52,8 +52,8 @@ v[0][ixl] = v0 #particles on the left move right
 radius = 0.005
 rs, vs = motion(r, v, ids_pairs, ts=t_steps, dt=dt, d_cutoff=2*radius)
 
-plt.xlim(0,1)
-plt.ylim(0,1)
 plt.scatter(*rs[473].cpu())
+plt.xlim(0,L)
+plt.ylim(0,L)
 plt.show()
 
