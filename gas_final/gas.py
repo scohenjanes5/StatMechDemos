@@ -58,22 +58,24 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
 def compute_rdf(points, L, dr):
     points=points.T
 
+    max_dist = np.sqrt(2) * L
+
     # Initialize RDF array
-    rdf = torch.zeros(int(L/dr), device=points.device)
+    rdf = torch.zeros(int(max_dist/dr), device=points.device)
 
     # Get number of particles
     N = points.shape[0]
 
     # Compute all pair distances
     dists = torch.cdist(points, points)
-    #dists = torch.min(dists, L - dists)  # Take into account periodic boundary conditions
+    #dists = torch.min(dists, max_dist - dists)  # Take into account periodic boundary conditions
     #print(dists.shape)
     
     # Compute bin indices for each distance
     bins = (dists / dr).long()
 
-    # Create a mask for distances less than L
-    mask = (dists < L)
+    # Create a mask for distances less than max_dist and exclude self pairs
+    mask = (dists < max_dist) & (dists > args.radius)
 
     masked_bins = bins[mask].flatten()
 
@@ -81,8 +83,25 @@ def compute_rdf(points, L, dr):
     rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
 
     # Normalize RDF
+
+    #bulk_density = N / L**2
+    #rdf /= bulk_density
+
+
     rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
-    rdf /= (4 * np.pi * dr * (torch.arange(len(rdf), device=points.device) * dr)**2)  # Divide by volume of each bin
+
+    inner_radius = torch.arange(len(rdf), device=points.device) * dr 
+    #outer_radius = inner_radius + dr
+
+    #areas = np.pi * (outer_radius**2 - inner_radius**2)
+
+    #plt.plot(areas.cpu())
+    #plt.show()
+
+    #quit()
+
+    rdf /=  2 * np.pi * inner_radius**2 * dr
+
 
     return rdf
 
@@ -133,11 +152,10 @@ v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
-#print(rs.shape)
-rdf = compute_rdf(rs[-1], L, dr=0.01)
+rdf = compute_rdf(rs[-1], L, dr=0.05)
 
-#plt.plot(rdf)
-#plt.show()
+plt.plot(rdf.cpu())
+plt.show()
 
 #animate(rs)
 
