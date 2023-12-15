@@ -1,0 +1,1 @@
+/opt/conda/conda-bld/pytorch_1646755903507/work/aten/src/ATen/native/cuda/ScatterGatherKernel.cu:111: operator(): block: [4,0,0], thread: [76,0,0] Assertion `idx_dim >= 0 && idx_dim < index_size && "index out of bounds"` failed.
