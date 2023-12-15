@@ -65,6 +65,19 @@ def getArgs():
     parser.add_argument('--test', action='store_true', help='Use easier parameters for testing')
     return parser.parse_args()
 
+def animate(rs):
+    fig, ax = plt.subplots()
+    artists = []
+    for snapshot in progress.track(rs, description='Creating Animation'):
+        # Append the updated plot as an artist for this frame
+        artists.append([ax.scatter(*snapshot.cpu(), s=1)])
+
+    # Create the animation
+    animation = ArtistAnimation(fig, artists, interval=1, blit=True)
+
+    # To display the animation
+    plt.show()
+
 args = getArgs()
 
 if args.test:
@@ -87,19 +100,10 @@ v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
+animate(rs)
+
 #plt.scatter(*rs[-1].cpu())
 #plt.xlim(0,L)
 #plt.ylim(0,L)
 #plt.show()
 
-fig, ax = plt.subplots()
-artists = []
-for snapshot in progress.track(rs, description='Creating Animation'):
-    # Append the updated plot as an artist for this frame
-    artists.append([ax.scatter(*snapshot.cpu(), s=1)])
-
-# Create the animation
-animation = ArtistAnimation(fig, artists, interval=1, blit=True)
-
-# To display the animation
-plt.show()
