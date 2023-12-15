@@ -17,6 +17,13 @@ def compute_new_v(v1, v2, r1, r2):
     v2new = v2 - torch.sum((v1-v2)*(r1-r2), axis=0)/torch.sum((r2-r1)**2, axis=0) * (r2-r1)
     return v1new, v2new
 
+def set_initial_velocities(N, v0):
+    v = torch.zeros((2,N)).to(device) #X,Y velocities in each row
+    #set random directions for velocities with magnitude v0
+    v[0] = v0 * torch.cos(2*np.pi*torch.rand(v.shape[1]))
+    v[1] = v0 * torch.sin(2*np.pi*torch.rand(v.shape[1]))
+    return v
+
 def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
     rs = torch.zeros((ts, r.shape[0], r.shape[1])).to(device) #Store positions at each time step
     vs = torch.zeros((ts, v.shape[0], v.shape[1])).to(device) #Store velocities at each time step
@@ -60,14 +67,14 @@ args = getArgs()
 L = args.L
 N = args.N
 
+print("Setting up initial conditions...")
 r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
-ixr = r[0]>0.5 #particles that start on the right
-ixl = r[0]<=0.5 #particles that start on the left
+#ixr = r[0]>0.5*L #particles that start on the right
+#ixl = r[0]<=0.5*L #particles that start on the left
 ids = torch.arange(N)
 ids_pairs = torch.combinations(ids,2).to(device)
-v = torch.zeros((2,N)).to(device) #X,Y velocities in each row
-v[0][ixr] = -args.v0 #particles on the right move left
-v[0][ixl] = args.v0 #particles on the left move right
+v = set_initial_velocities(N, args.v0)
+print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
 #plt.scatter(*rs[-1].cpu())
