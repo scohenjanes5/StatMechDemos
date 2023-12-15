@@ -64,13 +64,26 @@ def compute_rdf(points, L, dr):
 
     # Compute all pair distances
     dists = torch.cdist(points, points)
-    print(dists.shape)
+    #print(dists.shape)
     
     # Compute bin indices for each distance
-    bins = (dists / dr).long()
+    bins = (dists / dr).long().flatten()
+    print(bins)
+    print(bins.shape)
+
+    addition_tensor = torch.ones_like(bins, dtype=rdf.dtype)
+    print(addition_tensor)
+    print(addition_tensor.shape)
+
+    #quit()
 
     # Increment RDF array
-    rdf.scatter_add_(0, bins.flatten(), torch.ones_like(bins.flatten(), dtype=rdf.dtype)) #dimension,  indices, values
+    rdf.scatter_add_(0, bins, addition_tensor) #dimension,  indices, values
+   
+    print(rdf)
+    print(rdf.shape)
+
+    quit()
 
     # Normalize RDF
     rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
