@@ -53,6 +53,17 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         vs[i] = v #store velocities
     return rs, vs
 
+def compute_rdf(final_r, L, dr, ids_pairs):
+    #compute radial distribution function
+    rdf = torch.zeros(int(L/dr))
+    print(final_r.shape)
+    #quit()
+    for i in progress.track(range(final_r.shape[1]), description='Computing RDF'):
+        d = torch.sqrt(get_deltad2_pairs(final_r[:,i].unsqueeze(1), ids_pairs)).squeeze()
+        rdf += torch.histc(d, bins=int(L/dr), min=0, max=L)
+
+    plt.plot(rdf)
+    return rdf
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
     parser.add_argument('-N', '--N', type=int, default=4000, help='Number of particles')
@@ -99,6 +110,11 @@ ids_pairs = torch.combinations(ids,2).to(device)
 v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
+
+rdf = compute_rdf(rs[-1], L, dr=0.01, ids_pairs=ids_pairs)
+
+#plt.plot(rdf)
+#plt.show()
 
 animate(rs)
 
