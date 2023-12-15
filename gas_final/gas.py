@@ -23,8 +23,7 @@ def set_initial_velocities(N, v0):
     thetas = 2*np.pi*torch.rand(N).to(device)
     v[0] = v0 * torch.cos(thetas)
     v[1] = v0 * torch.sin(thetas)
-    print(f"The average initial velocity is {torch.mean(torch.sqrt(v[0]**2 + v[1]**2)):.2f}")
-    quit()
+    # print(f"The average initial velocity is {torch.mean(torch.sqrt(v[0]**2 + v[1]**2)):.2f}")
     return v
 
 def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
@@ -67,26 +66,19 @@ def compute_rdf(points, L, dr):
 
     # Compute all pair distances
     dists = torch.cdist(points, points)
+    #dists = torch.min(dists, L - dists)  # Take into account periodic boundary conditions
     #print(dists.shape)
     
     # Compute bin indices for each distance
-    bins = (dists / dr).long().flatten()
-    print(bins)
-    print(bins.shape)
+    bins = (dists / dr).long()
 
-    addition_tensor = torch.ones_like(bins, dtype=rdf.dtype)
-    print(addition_tensor)
-    print(addition_tensor.shape)
+    # Create a mask for distances less than L
+    mask = (dists < L)
 
-    #quit()
+    masked_bins = bins[mask].flatten()
 
-    # Increment RDF array
-    rdf.scatter_add_(0, bins, addition_tensor) #dimension,  indices, values
-   
-    print(rdf)
-    print(rdf.shape)
-
-    quit()
+    # Increment RDF array only for distances less than L
+    rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
 
     # Normalize RDF
     rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
