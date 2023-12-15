@@ -54,23 +54,23 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
     return rs, vs
 
 def compute_rdf(points, L, dr):
-    #print(points.shape)
+    points=points.T
 
     # Initialize RDF array
     rdf = torch.zeros(int(L/dr), device=points.device)
 
     # Get number of particles
-    N = points.shape[1]
+    N = points.shape[0]
 
     # Compute all pair distances
     dists = torch.cdist(points, points)
     print(dists.shape)
-
+    
     # Compute bin indices for each distance
     bins = (dists / dr).long()
 
     # Increment RDF array
-    rdf.scatter_add_(0, bins.flatten(), torch.ones_like(bins.flatten()))
+    rdf.scatter_add_(0, bins.flatten(), torch.ones_like(bins.flatten(), dtype=rdf.dtype)) #dimension,  indices, values
 
     # Normalize RDF
     rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
@@ -125,12 +125,13 @@ v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
+#print(rs.shape)
 rdf = compute_rdf(rs[-1], L, dr=0.01)
 
 #plt.plot(rdf)
 #plt.show()
 
-animate(rs)
+#animate(rs)
 
 #plt.scatter(*rs[-1].cpu())
 #plt.xlim(0,L)
