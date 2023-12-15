@@ -43,21 +43,31 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         vs[i] = r #store velocities
     return rs, vs
 
-N = 3000
-dt = 8e-6
-t_steps = 2000
-v0 = 500
-L = 100 #box size
+def getArgs():
+    parser = argparse.ArgumentParser(description='Simulate a gas')
+    parser.add_argument('--N', type=int, default=3000, help='Number of particles')
+    parser.add_argument('--dt', type=float, default=8e-6, help='Time step')
+    parser.add_argument('--t_steps', type=int, default=2000, help='Number of time steps')
+    parser.add_argument('--v0', type=float, default=500, help='Initial velocity')
+    parser.add_argument('--L', type=float, default=10, help='Box size')
+    parser.add_argument('--radius', type=float, default=0.005, help='Collision radius')
+    parser.add_argument('--box_type', type=str, default='periodic', help='Box type')
+    return parser.parse_args()
+
+args = getArgs()
+
+L = args.L
+N = args.N
+
 r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
 ixr = r[0]>0.5 #particles that start on the right
 ixl = r[0]<=0.5 #particles that start on the left
 ids = torch.arange(N)
 ids_pairs = torch.combinations(ids,2).to(device)
 v = torch.zeros((2,N)).to(device) #X,Y velocities in each row
-v[0][ixr] = -v0 #particles on the right move left
-v[0][ixl] = v0 #particles on the left move right
-radius = 0.005
-rs, vs = motion(r, v, ids_pairs, ts=t_steps, dt=dt, d_cutoff=2*radius, box_size=L)
+v[0][ixr] = -args.v0 #particles on the right move left
+v[0][ixl] = args.v0 #particles on the left move right
+rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
 plt.scatter(*rs[-1].cpu())
 plt.xlim(0,L)
