@@ -53,11 +53,11 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
-    parser.add_argument('--N', type=int, default=3000, help='Number of particles')
+    parser.add_argument('-N', '--N', type=int, default=4000, help='Number of particles')
     parser.add_argument('--dt', type=float, default=8e-6, help='Time step')
     parser.add_argument('--t_steps', type=int, default=2000, help='Number of time steps')
     parser.add_argument('--v0', type=float, default=500, help='Initial velocity')
-    parser.add_argument('--L', type=float, default=10, help='Box size')
+    parser.add_argument('-L', '--L', type=float, default=10, help='Box size')
     parser.add_argument('--radius', type=float, default=0.005, help='Collision radius')
     parser.add_argument('--box_type', type=str, default='periodic', help='Box type')
     return parser.parse_args()
