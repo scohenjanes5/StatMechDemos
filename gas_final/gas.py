@@ -49,7 +49,6 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
             r[1,r[1]>box_size] = r[1,r[1]>box_size] - box_size #particles that hit the top wall reappear on the bottom
             r[1,r[1]<0] = r[1,r[1]<0] + box_size #particles that hit the bottom wall reappear on the top
         
-        r = r + v*dt #update positions according to velocities
         rs[i] = r #store positions
         vs[i] = v #store velocities
     return rs, vs
