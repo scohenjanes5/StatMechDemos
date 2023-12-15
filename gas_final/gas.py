@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.animation import ArtistAnimation
 import argparse
 from rich import progress
 import torch
@@ -69,8 +70,19 @@ v[0][ixr] = -args.v0 #particles on the right move left
 v[0][ixl] = args.v0 #particles on the left move right
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
-plt.scatter(*rs[-1].cpu())
-plt.xlim(0,L)
-plt.ylim(0,L)
-plt.show()
+#plt.scatter(*rs[-1].cpu())
+#plt.xlim(0,L)
+#plt.ylim(0,L)
+#plt.show()
 
+fig, ax = plt.subplots()
+artists = []
+for snapshot in progress.track(rs, description='Creating Animation'):
+    # Append the updated plot as an artist for this frame
+    artists.append([ax.scatter(*snapshot.cpu(), s=1)])
+
+# Create the animation
+animation = ArtistAnimation(fig, artists, interval=1, blit=True)
+
+# To display the animation
+plt.show()
