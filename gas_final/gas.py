@@ -53,17 +53,31 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         vs[i] = v #store velocities
     return rs, vs
 
-def compute_rdf(final_r, L, dr, ids_pairs):
-    #compute radial distribution function
-    rdf = torch.zeros(int(L/dr))
-    print(final_r.shape)
-    #quit()
-    for i in progress.track(range(final_r.shape[1]), description='Computing RDF'):
-        d = torch.sqrt(get_deltad2_pairs(final_r[:,i].unsqueeze(1), ids_pairs)).squeeze()
-        rdf += torch.histc(d, bins=int(L/dr), min=0, max=L)
+def compute_rdf(points, L, dr):
+    #print(points.shape)
 
-    plt.plot(rdf)
+    # Initialize RDF array
+    rdf = torch.zeros(int(L/dr), device=points.device)
+
+    # Get number of particles
+    N = points.shape[1]
+
+    # Compute all pair distances
+    dists = torch.cdist(points, points)
+    print(dists.shape)
+
+    # Compute bin indices for each distance
+    bins = (dists / dr).long()
+
+    # Increment RDF array
+    rdf.scatter_add_(0, bins.flatten(), torch.ones_like(bins.flatten()))
+
+    # Normalize RDF
+    rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
+    rdf /= (4 * np.pi * dr * (torch.arange(len(rdf), device=points.device) * dr)**2)  # Divide by volume of each bin
+
     return rdf
+
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
     parser.add_argument('-N', '--N', type=int, default=4000, help='Number of particles')
@@ -111,7 +125,7 @@ v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
-rdf = compute_rdf(rs[-1], L, dr=0.01, ids_pairs=ids_pairs)
+rdf = compute_rdf(rs[-1], L, dr=0.01)
 
 #plt.plot(rdf)
 #plt.show()
