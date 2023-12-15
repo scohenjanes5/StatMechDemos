@@ -62,9 +62,17 @@ def getArgs():
     parser.add_argument('-L', '--L', type=float, default=10, help='Box size')
     parser.add_argument('--radius', type=float, default=0.005, help='Collision radius')
     parser.add_argument('--box_type', type=str, default='periodic', help='Box type')
+    parser.add_argument('--test', action='store_true', help='Use easier parameters for testing')
     return parser.parse_args()
 
 args = getArgs()
+
+if args.test:
+    args.N = 101
+    args.v0 = 100
+    args.dt = 1e-6
+    args.t_steps = 1000
+    args.radius = 0.05
 
 L = args.L
 N = args.N
