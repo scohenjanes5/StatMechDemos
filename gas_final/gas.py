@@ -55,7 +55,8 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         vs[i] = v #store velocities
     return rs, vs
 
-def compute_rdf(rs, L, dr):
+def compute_rdf(rs_arg, L, dr):
+    # print(rs_arg.shape)
     #rs=rs.T
 
     max_dist = np.sqrt(2) * L
@@ -63,13 +64,14 @@ def compute_rdf(rs, L, dr):
     # Initialize RDF array
     rdf_sum = torch.zeros(int(max_dist/dr), device=device)
 
-    for points in progress.track(rs, description='Computing RDF'):
+    for points in progress.track(rs_arg, description='Computing RDF'):
 
         points = points.T
 
         # Compute all pair distances
         dists = torch.cdist(points, points)
-        dists = torch.min(dists, max_dist - dists)  # Take into account periodic boundary conditions
+        if args.box_type == 'periodic':
+            dists = torch.min(dists, L - dists) # Take into account periodic boundary conditions
         #print(dists.shape)
         
         # Compute bin indices for each distance
@@ -86,7 +88,7 @@ def compute_rdf(rs, L, dr):
 
         rdf_sum += rdf
 
-    rdf = rdf_sum / len(rs)
+    rdf = rdf_sum / len(rs_arg)
 
     # Normalize RDF
     # Get number of particles
@@ -117,10 +119,10 @@ def getArgs():
     parser.add_argument('--test', action='store_true', help='Use easier parameters for testing')
     return parser.parse_args()
 
-def animate(rs):
+def animate(rs_arg):
     fig, ax = plt.subplots()
     artists = []
-    for snapshot in progress.track(rs, description='Creating Animation'):
+    for snapshot in progress.track(rs_arg, description='Creating Animation'):
         # Append the updated plot as an artist for this frame
         artists.append([ax.scatter(*snapshot.cpu(), s=1)])
 
@@ -133,7 +135,7 @@ def animate(rs):
 args = getArgs()
 
 if args.test:
-    args.N = 100
+    args.N = 101
     args.v0 = 100
     args.dt = 1e-6
     args.t_steps = 1000
@@ -151,10 +153,25 @@ ids_pairs = torch.combinations(ids,2).to(device)
 v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
+# print(rs.shape)
+#quit()
+num_kept_steps = int(args.t_steps/2)
+# print(num_kept_steps)
+# print(rs[num_kept_steps:].shape)
+# print("entering compute_rdf")
+rdf = compute_rdf(rs[num_kept_steps:], L, dr=0.05)
 
-rdf = compute_rdf(rs[-1], L, dr=0.05)
+print(rdf.shape)
 
-plt.plot(rdf.cpu()[1:])
+rdf = rdf.cpu().numpy()
+
+rdf = np.trim_zeros(rdf, 'b')
+
+print(rdf.shape)
+#write to file
+# np.savetxt("rdf.csv", rdf)s
+
+plt.plot(rdf[1:])
 plt.show()
 
 #animate(rs)
