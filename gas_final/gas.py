@@ -55,41 +55,49 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         vs[i] = v #store velocities
     return rs, vs
 
-def compute_rdf(points, L, dr):
-    points=points.T
+def compute_rdf(rs, L, dr):
+    #rs=rs.T
 
     max_dist = np.sqrt(2) * L
 
     # Initialize RDF array
-    rdf = torch.zeros(int(max_dist/dr), device=points.device)
+    rdf_sum = torch.zeros(int(max_dist/dr), device=device)
 
-    # Get number of particles
-    N = points.shape[0]
+    for points in progress.track(rs, description='Computing RDF'):
 
-    # Compute all pair distances
-    dists = torch.cdist(points, points)
-    dists = torch.min(dists, max_dist - dists)  # Take into account periodic boundary conditions
-    #print(dists.shape)
-    
-    # Compute bin indices for each distance
-    bins = (dists / dr).long()
+        points = points.T
 
-    # Create a mask for distances less than max_dist and exclude self pairs
-    mask = (dists < max_dist) & (dists > 0)
+        # Compute all pair distances
+        dists = torch.cdist(points, points)
+        dists = torch.min(dists, max_dist - dists)  # Take into account periodic boundary conditions
+        #print(dists.shape)
+        
+        # Compute bin indices for each distance
+        bins = (dists / dr).long()
 
-    masked_bins = bins[mask].flatten()
+        # Create a mask for distances less than max_dist and exclude self pairs
+        mask = (dists < max_dist) & (dists > 0)
 
-    # Increment RDF array only for distances less than L
-    rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
+        masked_bins = bins[mask].flatten()
+
+        # Increment RDF array only for distances less than L
+        rdf = torch.zeros_like(rdf_sum)
+        rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
+
+        rdf_sum += rdf
+
+    rdf = rdf_sum / len(rs)
 
     # Normalize RDF
+    # Get number of particles
+    N = rs.shape[2]
 
     #bulk_density = N / L**2
     #rdf /= bulk_density
 
     rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
 
-    inner_radius = torch.arange(len(rdf), device=points.device) * dr 
+    inner_radius = torch.arange(len(rdf), device=device) * dr 
     outer_radius = inner_radius + dr
     areas = np.pi * (outer_radius**2 - inner_radius**2)
 
@@ -125,7 +133,7 @@ def animate(rs):
 args = getArgs()
 
 if args.test:
-    args.N = 101
+    args.N = 100
     args.v0 = 100
     args.dt = 1e-6
     args.t_steps = 1000
