@@ -159,22 +159,21 @@ num_kept_steps = int(args.t_steps/2)
 # print(num_kept_steps)
 # print(rs[num_kept_steps:].shape)
 # print("entering compute_rdf")
-rdf = compute_rdf(rs[num_kept_steps:], L, dr=0.05)
+rdf = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
 
 print(rdf.shape)
 
 rdf = rdf.cpu().numpy()
-
 rdf = np.trim_zeros(rdf, 'b')
 
-print(rdf.shape)
+#print(rdf.shape)
 #write to file
 # np.savetxt("rdf.csv", rdf)s
 
-plt.plot(rdf[1:])
-plt.show()
+#plt.plot(rdf[5:])
+#plt.show()
 
-#animate(rs)
+animate(rs)
 
 #plt.scatter(*rs[-1].cpu())
 #plt.xlim(0,L)
