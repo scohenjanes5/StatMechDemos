@@ -9,18 +9,17 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 coords = np.loadtxt('coords.csv', delimiter=',')
 xy = coords
 
+
+#boilerplate to format the coords coorectly for each function.
 coords = torch.tensor(coords.T)
-
-print(coords.shape) ## (2, 4000)
-
+# print(coords.shape) ## (2, 4000)
 #add another dimension so shape is (1,2,4000)
 coords = coords.unsqueeze(0).to(device)
-print(coords.shape)
+# print(coords.shape)
 
+#calculate rdf with both methods
 g_r, radii =  compute_rdf(coords, 10, dr=0.01, box_type = "periodic")
-
 real_g_r, real_radii = rdfpy.rdf(xy, 0.01)
-
 
 #plot on different subplots
 fig, axs = plt.subplots(2, 1, constrained_layout=True)
