@@ -59,57 +59,74 @@ def compute_rdf(rs_arg, L, dr, box_type):
     # print(rs_arg.shape)
     #rs=rs.T
 
+    N = rs_arg.shape[2]
+    bulk_density = N / L**2
+    # print(f"bulk_density: {bulk_density}")
+
     max_dist = np.sqrt(2) * L
 
     # Initialize RDF array
     rdf_sum = torch.zeros(int(max_dist/dr), device=device)
 
-    for points in progress.track(rs_arg, description='Computing RDF'):
+    radii = torch.arange(len(rdf_sum), device=device) * dr
+
+    for r in progress.track(radii, description='Computing RDF'):
+
+        for points in rs_arg:
+            # print(points.shape)
+
+            points = points.T
+
+            # Create a mask to exclude particles near the edges of the box for the current radius
+            mask_edge = torch.all((points >= r + dr) & (points <= L - (r + dr)), dim=1)
+
+            # Apply the mask to the points
+            valid_points = points[mask_edge]
+
+            # print(valid_points.shape)
+            #number of valid points
+            n_valid = valid_points.shape[0]
+            # print(f"n_valid: {n_valid}")
+            # quit()
+
+            # Compute all pair distances for the valid points
+            dists = torch.cdist(valid_points, valid_points)
+
+            # Remove lower triangle
+            dists = torch.triu(dists)
+            # print(f"max dist: {torch.max(dists)}")
+
+            if box_type == 'periodic':
+                dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
+            #print(dists.shape)
         
-        print(points.shape)
+            # Compute bin indices for each distance
+            bins = (dists / dr).long()
 
-        points = points.T
+            # Create a mask for distances less than max_dist and exclude self pairs
+            mask = (dists < r+dr) & (dists > r)
 
-        # Compute all pair distances
-        dists = torch.cdist(points, points)
-        if box_type == 'periodic':
-            dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
-        #print(dists.shape)
-        
-        # Compute bin indices for each distance
-        bins = (dists / dr).long()
+            masked_bins = bins[mask].flatten()
 
-        # Create a mask for distances less than max_dist and exclude self pairs
-        mask = (dists < max_dist) & (dists > 0)
+            # Increment RDF array only for distances less than L
+            rdf = torch.zeros_like(rdf_sum)
+            rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
+            
+            ring_area = np.pi * ((r + dr)**2 - r**2)
+            if n_valid > 0:
+                rdf /= n_valid*bulk_density*ring_area
+            else:
+                rdf *= 0
 
-        masked_bins = bins[mask].flatten()
+            # print(f'length of rdf: {len(rdf)}')
+            # print(rdf)
+            # print(torch.sum(rdf))
 
-        # Increment RDF array only for distances less than L
-        rdf = torch.zeros_like(rdf_sum)
-        rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
-
-        rdf_sum += rdf
+            rdf_sum += rdf
 
     rdf = rdf_sum / len(rs_arg)
 
-    # Normalize RDF
-    # Get number of particles
-    N = rs_arg.shape[2]
-
-    bulk_density = N / L**2
-    rdf /= bulk_density
-
-    rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
-
-    inner_radius = torch.arange(len(rdf), device=device) * dr 
-    outer_radius = inner_radius + dr
-    #areas = np.pi * (outer_radius**2 - inner_radius**2)
-    areas = 2 * np.pi * inner_radius * dr
-
-    rdf /=  areas
-
-    #tensor containing the radii
-    radii = inner_radius #torch.arange(len(rdf), device=device) * dr
+    # print(f'length of rdf: {len(rdf)}')
 
     #convert to numpy and trim zeros
     rdf = rdf.cpu().numpy()
@@ -117,7 +134,7 @@ def compute_rdf(rs_arg, L, dr, box_type):
     radii = radii.cpu().numpy()
     radii = radii[:len(rdf)]
     
-    return rdf, radii
+    return rdf, radii #, normalization
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
