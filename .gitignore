@@ -2,3 +2,4 @@
 SimulatedAnnealing/config.xyz
 gas_final/rdf.csv
 gas_final/coords.csv
+*.pyc
