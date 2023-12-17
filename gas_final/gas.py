@@ -55,7 +55,7 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         vs[i] = v #store velocities
     return rs, vs
 
-def compute_rdf(rs_arg, L, dr):
+def compute_rdf(rs_arg, L, dr, box_type):
     # print(rs_arg.shape)
     #rs=rs.T
 
@@ -65,12 +65,14 @@ def compute_rdf(rs_arg, L, dr):
     rdf_sum = torch.zeros(int(max_dist/dr), device=device)
 
     for points in progress.track(rs_arg, description='Computing RDF'):
+        
+        print(points.shape)
 
         points = points.T
 
         # Compute all pair distances
         dists = torch.cdist(points, points)
-        if args.box_type == 'periodic':
+        if box_type == 'periodic':
             dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
         #print(dists.shape)
         
@@ -92,7 +94,7 @@ def compute_rdf(rs_arg, L, dr):
 
     # Normalize RDF
     # Get number of particles
-    N = rs.shape[2]
+    N = rs_arg.shape[2]
 
     bulk_density = N / L**2
     rdf /= bulk_density
@@ -148,48 +150,56 @@ def plot_rdf(rdf, radii):
     plt.ylabel("g(r)")
     plt.show()
 
-args = getArgs()
+def main():
 
-if args.box_type == 'p':
-    args.box_type = 'periodic'
-elif args.box_type == 'r':
-    args.box_type = 'reflective'
+    args = getArgs()
 
-if args.test:
-    args.N = 101
-    args.v0 = 100
-    args.dt = 1e-6
-    args.t_steps = 1000
-    args.radius = 0.05
+    if args.box_type == 'p':
+        args.box_type = 'periodic'
+    elif args.box_type == 'r':
+        args.box_type = 'reflective'
 
-L = args.L
-N = args.N
+    if args.test:
+        args.N = 101
+        args.v0 = 100
+        args.dt = 1e-6
+        args.t_steps = 1000
+        args.radius = 0.05
 
-print("Setting up initial conditions...")
-r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
-ids = torch.arange(N)
-ids_pairs = torch.combinations(ids,2).to(device)
-v = set_initial_velocities(N, args.v0)
-print("Done")
-rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
+    L = args.L
+    N = args.N
 
-num_kept_steps = int(args.t_steps/2)
-num_kept_steps = args.t_steps - 1
+    print("Setting up initial conditions...")
+    r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
+    ids = torch.arange(N)
+    ids_pairs = torch.combinations(ids,2).to(device)
+    v = set_initial_velocities(N, args.v0)
+    print("Done")
+    rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
-rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
+    num_kept_steps = int(args.t_steps/2)
+    num_kept_steps = args.t_steps - 1
 
-#write to file
-np.savetxt("rdf.csv", rdf)
-#write coordinates to file
-np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
+    kept_rs = rs[num_kept_steps:]
+    print(kept_rs.shape)
 
-#plot
-plot_rdf(rdf, radii)
+    rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
 
-#animate(rs)
+    #write to file
+    np.savetxt("rdf.csv", rdf)
+    #write coordinates to file
+    np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
 
-#plt.scatter(*rs[-1].cpu())
-#plt.xlim(0,L)
-#plt.ylim(0,L)
-#plt.show()
+    #plot
+    plot_rdf(rdf, radii)
+
+    #animate(rs)
+
+    #plt.scatter(*rs[-1].cpu())
+    #plt.xlim(0,L)
+    #plt.ylim(0,L)
+    #plt.show()
+
+if __name__ == "__main__":
+    main()
 
