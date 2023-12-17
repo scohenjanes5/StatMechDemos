@@ -71,7 +71,7 @@ def compute_rdf(rs_arg, L, dr):
         # Compute all pair distances
         dists = torch.cdist(points, points)
         if args.box_type == 'periodic':
-            dists = torch.min(dists, L - dists) # Take into account periodic boundary conditions
+            dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
         #print(dists.shape)
         
         # Compute bin indices for each distance
@@ -94,18 +94,28 @@ def compute_rdf(rs_arg, L, dr):
     # Get number of particles
     N = rs.shape[2]
 
-    #bulk_density = N / L**2
-    #rdf /= bulk_density
+    bulk_density = N / L**2
+    rdf /= bulk_density
 
     rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
 
     inner_radius = torch.arange(len(rdf), device=device) * dr 
     outer_radius = inner_radius + dr
-    areas = np.pi * (outer_radius**2 - inner_radius**2)
+    #areas = np.pi * (outer_radius**2 - inner_radius**2)
+    areas = 2 * np.pi * inner_radius * dr
 
     rdf /=  areas
 
-    return rdf
+    #tensor containing the radii
+    radii = inner_radius #torch.arange(len(rdf), device=device) * dr
+
+    #convert to numpy and trim zeros
+    rdf = rdf.cpu().numpy()
+    rdf = np.trim_zeros(rdf, 'b')
+    radii = radii.cpu().numpy()
+    radii = radii[:len(rdf)]
+    
+    return rdf, radii
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
@@ -115,7 +125,7 @@ def getArgs():
     parser.add_argument('--v0', type=float, default=500, help='Initial velocity')
     parser.add_argument('-L', '--L', type=float, default=10, help='Box size')
     parser.add_argument('--radius', type=float, default=0.005, help='Collision radius')
-    parser.add_argument('--box_type', type=str, default='periodic', help='Box type')
+    parser.add_argument('--box_type', type=str, default='periodic', help='Box type: periodic (p) or reflective (r)')
     parser.add_argument('--test', action='store_true', help='Use easier parameters for testing')
     return parser.parse_args()
 
@@ -132,7 +142,18 @@ def animate(rs_arg):
     # To display the animation
     plt.show()
 
+def plot_rdf(rdf, radii):
+    plt.plot(radii, rdf)
+    plt.xlabel("r")
+    plt.ylabel("g(r)")
+    plt.show()
+
 args = getArgs()
+
+if args.box_type == 'p':
+    args.box_type = 'periodic'
+elif args.box_type == 'r':
+    args.box_type = 'reflective'
 
 if args.test:
     args.N = 101
@@ -146,34 +167,26 @@ N = args.N
 
 print("Setting up initial conditions...")
 r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
-#ixr = r[0]>0.5*L #particles that start on the right
-#ixl = r[0]<=0.5*L #particles that start on the left
 ids = torch.arange(N)
 ids_pairs = torch.combinations(ids,2).to(device)
 v = set_initial_velocities(N, args.v0)
 print("Done")
 rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
-# print(rs.shape)
-#quit()
+
 num_kept_steps = int(args.t_steps/2)
-# print(num_kept_steps)
-# print(rs[num_kept_steps:].shape)
-# print("entering compute_rdf")
-rdf = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
+num_kept_steps = args.t_steps - 1
 
-print(rdf.shape)
+rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
 
-rdf = rdf.cpu().numpy()
-rdf = np.trim_zeros(rdf, 'b')
-
-#print(rdf.shape)
 #write to file
-# np.savetxt("rdf.csv", rdf)s
+np.savetxt("rdf.csv", rdf)
+#write coordinates to file
+np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
 
-#plt.plot(rdf[5:])
-#plt.show()
+#plot
+plot_rdf(rdf, radii)
 
-animate(rs)
+#animate(rs)
 
 #plt.scatter(*rs[-1].cpu())
 #plt.xlim(0,L)
