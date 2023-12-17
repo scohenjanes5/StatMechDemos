@@ -72,17 +72,45 @@ def compute_rdf(rs_arg, L, dr, box_type):
 
     for r in progress.track(radii, description='Computing RDF'):
 
+        r=1
+
         for points in rs_arg:
             # print(points.shape)
 
             points = points.T
+            print(points.shape)
+            #show the first 10 points
+            print(points[:10])
+
+            # #print the number of points with either x or y coordinate greater than L + r + dr or less than r + dr
+            print(torch.sum((points[:,0] <= L - (r + dr)) | (points[:,1] >= L - (r + dr))))
+
+            # #print the total number of points
+            # print(f"total number of points: {points.shape[0]}")
+
+            #print out dimension 1 of points
+            # print(points[:,0])
+            #print out dimension 2 of points
+            # print(points[:,1])
 
             # Create a mask to exclude particles near the edges of the box for the current radius
-            mask_edge = torch.all((points >= r + dr) & (points <= L - (r + dr)), dim=1)
-
+            valid_idxs = torch.bitwise_and(torch.tensor([(points[:, i] >= (r + dr)) & (points[:, i] <= L - (r + dr)) for i in range(2)]), dtype=torch.bool)
+            print(type(valid_idxs))
+#            x_mask_edge = torch.all((points[:,0] >= r + dr) & (points[:,0] <= L - (r + dr)), dim=0)
+#            y_mask_edge = torch.all((points[:,1] >= r + dr) & (points[:,1] <= L - (r + dr)), dim=0)
+            
             # Apply the mask to the points
-            valid_points = points[mask_edge]
+            #valid_points = points[x_mask_edge & y_mask_edge]
+            valid_points = points[valid_idxs]
 
+            # #print the first 10 points
+            print(valid_points[:10])
+            # #print the number of points with either x or y coordinate greater than L + r + dr or less than r + dr
+            print(torch.sum((valid_points[:,0] <= L - (r + dr)) | (valid_points[:,1] >= L - (r + dr))))
+            # #print the total number of points
+            print(f"total number of points: {valid_points.shape[0]}")
+
+            quit()
             # print(valid_points.shape)
             #number of valid points
             n_valid = valid_points.shape[0]
@@ -162,7 +190,7 @@ def animate(rs_arg):
     plt.show()
 
 def plot_rdf(rdf, radii):
-    plt.plot(radii, rdf)
+    plt.plot(radii[:], rdf[:])
     plt.xlabel("r")
     plt.ylabel("g(r)")
     plt.show()
@@ -198,7 +226,7 @@ def main():
     num_kept_steps = args.t_steps - 1
 
     kept_rs = rs[num_kept_steps:]
-    print(kept_rs.shape)
+    #print(kept_rs.shape)
 
     rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
 
