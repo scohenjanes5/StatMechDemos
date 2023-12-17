@@ -19,18 +19,22 @@ coords = coords.unsqueeze(0).to(device)
 
 #calculate rdf with both methods
 g_r, radii =  compute_rdf(coords, 10, dr=0.01, box_type = "periodic")
+
+plt.plot(radii, g_r)
+plt.show()
+
 # print(g_r.shape)
 # print(radii.shape)
 # print(radii)
 # print(g_r)
 
-real_g_r, real_radii = rdfpy.rdf(xy, 0.01, parallel=False)
+# real_g_r, real_radii = rdfpy.rdf(xy, 0.01, parallel=False)
 
 #plot on different subplots
-fig, axs = plt.subplots(2, 1, constrained_layout=True)
-axs[0].plot(radii, g_r)
-axs[0].set_title('g(r) from gas.py')
-axs[1].plot(real_radii, real_g_r)
-axs[1].set_title('g(r) from rdfpy')
-plt.show()
+# fig, axs = plt.subplots(2, 1, constrained_layout=True)
+# axs[0].plot(radii, g_r)
+# axs[0].set_title('g(r) from gas.py')
+# axs[1].plot(real_radii, real_g_r)
+# axs[1].set_title('g(r) from rdfpy')
+# plt.show()
 
