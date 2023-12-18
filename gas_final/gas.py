@@ -222,7 +222,7 @@ def main():
     rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
     if not args.test:
-        num_kept_steps = int(args.t_steps/4)
+        num_kept_steps = args.t_steps - 10 #int(args.t_steps/4)
     else:
         num_kept_steps = args.t_steps - 1
 
