@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import ArtistAnimation
 import argparse
 from rich import progress
-import torch
+import torch, rdfpy
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -54,6 +54,33 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         rs[i] = r #store positions
         vs[i] = v #store velocities
     return rs, vs
+
+def get_rdf(rs_arg, dr, L, cutoff=0.9):
+    r_max = (L/2) * cutoff
+    g_r_avg = np.zeros(int(r_max/dr))
+    lengths = []
+    # print(f'g_r_avg shape: {g_r_avg.shape}')
+
+    for snapshot in progress.track(rs_arg, description='Computing RDF'):
+        points = snapshot.T.cpu().numpy()
+        # print(points.shape)
+        g_r, radii = rdfpy.rdf(points, dr=dr, rcutoff=cutoff)
+        lengths.append(len(g_r))
+        # print(f'g_r shape: {g_r.shape}')
+        #add the current g_r to the average. Extend the array if necessary
+        if len(g_r) > len(g_r_avg):
+            g_r_avg = np.pad(g_r_avg, (0,len(g_r)-len(g_r_avg)), 'constant', constant_values=(0))
+        elif len(g_r) < len(g_r_avg):
+            g_r = np.pad(g_r, (0,len(g_r_avg)-len(g_r)), 'constant', constant_values=(0))
+        g_r_avg += g_r
+    g_r_avg /= len(rs_arg)
+
+    min_length = min(lengths)
+    g_r_avg = g_r_avg[:min_length]
+
+    #create a radii array that is the same length as g_r_avg
+    radii = np.arange(len(g_r_avg)) * dr
+    return g_r_avg, radii
 
 def compute_rdf(rs_arg, L, dr, box_type):
     # print(rs_arg.shape)
@@ -194,13 +221,16 @@ def main():
     print("Done")
     rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
-    num_kept_steps = int(args.t_steps/2)
-    num_kept_steps = args.t_steps - 1
+    if not args.test:
+        num_kept_steps = int(args.t_steps/4)
+    else:
+        num_kept_steps = args.t_steps - 1
 
     kept_rs = rs[num_kept_steps:]
-    print(kept_rs.shape)
+    #print(kept_rs.shape)
 
-    rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
+    #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
+    rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
 
     #write to file
     np.savetxt("rdf.csv", rdf)
