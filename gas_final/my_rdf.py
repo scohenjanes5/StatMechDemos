@@ -18,7 +18,7 @@ coords = coords.unsqueeze(0).to(device)
 # print(coords.shape)
 
 #calculate rdf with both methods
-g_r, radii =  compute_rdf(coords, 1, dr=0.01, box_type = "periodic")
+g_r, radii =  compute_rdf(coords, 10, dr=0.01)
 # print(g_r.shape)
 # print(radii.shape)
 # print(radii)
