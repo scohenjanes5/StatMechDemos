@@ -155,7 +155,7 @@ def compute_rdf(rs_arg, L, dr):
     rdf = rdf[1:int(0.9 * L / 2 / dr)]
     radii = radii[1:len(rdf)+1]
 
-    return rdf, radii #, normalization
+    return rdf.cpu().numpy(), radii.cpu().numpy()
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
@@ -223,16 +223,16 @@ def main():
     kept_rs = rs[num_kept_steps:]
     #print(kept_rs.shape)
 
-    rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
-    #rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
+    #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
+    rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
 
     #write to file
-    np.savetxt("rdf.csv", rdf.cpu().numpy(), delimiter=",")
+    np.savetxt("rdf.csv", rdf, delimiter=",")
     #write coordinates to file
     np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
 
     #plot
-    plot_rdf(rdf.cpu().numpy(), radii.cpu().numpy())
+    plot_rdf(rdf, radii)
 
     #animate(rs)
 
