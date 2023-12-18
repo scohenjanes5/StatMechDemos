@@ -117,14 +117,17 @@ def compute_rdf(rs_arg, L, dr, box_type):
             # quit()
 
             # Compute all pair distances for the valid points
-            dists = torch.cdist(valid_points, valid_points)
+            # Need to find distances between valid points and ALL points
+            dists = torch.cdist(valid_points, points)
+            print(dists)
+            # dists = torch.cdist(valid_points, valid_points)
 
             # Remove lower triangle
             dists = torch.triu(dists)
             # print(f"max dist: {torch.max(dists)}")
 
-            if box_type == 'periodic':
-                dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
+            #if box_type == 'periodic':
+            #    dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
             #print(dists.shape)
         
             # Compute bin indices for each distance
@@ -229,8 +232,8 @@ def main():
     kept_rs = rs[num_kept_steps:]
     #print(kept_rs.shape)
 
-    #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
-    rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
+    rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
+    #rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
 
     #write to file
     np.savetxt("rdf.csv", rdf)
