@@ -152,11 +152,9 @@ def compute_rdf(rs_arg, L, dr):
     # print(f'length of rdf: {len(rdf)}')
 
     #Max radius plotted is 0.9 * L / 2
-    rdf = rdf[:int(0.9 * L / 2 / dr)]
-    radii = radii[:len(rdf)]
+    rdf = rdf[1:int(0.9 * L / 2 / dr)]
+    radii = radii[1:len(rdf)+1]
 
-    rdf[0] = 0 #set first value to 0
-    
     return rdf, radii #, normalization
 
 def getArgs():
@@ -229,12 +227,12 @@ def main():
     #rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
 
     #write to file
-    np.savetxt("rdf.csv", rdf)
+    np.savetxt("rdf.csv", rdf.cpu().numpy(), delimiter=",")
     #write coordinates to file
     np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
 
     #plot
-    plot_rdf(rdf, radii)
+    plot_rdf(rdf.cpu().numpy(), radii.cpu().numpy())
 
     #animate(rs)
 
