@@ -64,7 +64,7 @@ def get_rdf(rs_arg, dr, L, cutoff=0.9):
     for snapshot in progress.track(rs_arg, description='Computing RDF'):
         points = snapshot.T.cpu().numpy()
         # print(points.shape)
-        g_r, radii = rdfpy.rdf(points, dr=dr, rcutoff=cutoff)
+        g_r, radii = rdfpy.rdf(points, dr=dr, rcutoff=cutoff, parallel=True)
         lengths.append(len(g_r))
         # print(f'g_r shape: {g_r.shape}')
         #add the current g_r to the average. Extend the array if necessary
@@ -82,7 +82,7 @@ def get_rdf(rs_arg, dr, L, cutoff=0.9):
     radii = np.arange(len(g_r_avg)) * dr
     return g_r_avg, radii
 
-def compute_rdf(rs_arg, L, dr, box_type):
+def compute_rdf(rs_arg, L, dr):
     # print(rs_arg.shape)
     #rs=rs.T
 
@@ -118,22 +118,19 @@ def compute_rdf(rs_arg, L, dr, box_type):
 
             # Compute all pair distances for the valid points
             # Need to find distances between valid points and ALL points
-            dists = torch.cdist(valid_points, points)
-            print(dists)
+            dists = torch.cdist(points, points)
+            # print(dists.shape)
+            dists = dists[mask_edge, :]
+            # print(dists.shape)
             # dists = torch.cdist(valid_points, valid_points)
 
             # Remove lower triangle
             dists = torch.triu(dists)
-            # print(f"max dist: {torch.max(dists)}")
-
-            #if box_type == 'periodic':
-            #    dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
-            #print(dists.shape)
         
             # Compute bin indices for each distance
             bins = (dists / dr).long()
 
-            # Create a mask for distances less than max_dist and exclude self pairs
+            # Create a mask for distances between r and r+dr
             mask = (dists < r+dr) & (dists > r)
 
             masked_bins = bins[mask].flatten()
@@ -148,21 +145,17 @@ def compute_rdf(rs_arg, L, dr, box_type):
             else:
                 rdf *= 0
 
-            # print(f'length of rdf: {len(rdf)}')
-            # print(rdf)
-            # print(torch.sum(rdf))
-
             rdf_sum += rdf
 
     rdf = rdf_sum / len(rs_arg)
 
     # print(f'length of rdf: {len(rdf)}')
 
-    #convert to numpy and trim zeros
-    rdf = rdf.cpu().numpy()
-    rdf = np.trim_zeros(rdf, 'b')
-    radii = radii.cpu().numpy()
+    #Max radius plotted is 0.9 * L / 2
+    rdf = rdf[:int(0.9 * L / 2 / dr)]
     radii = radii[:len(rdf)]
+
+    rdf[0] = 0 #set first value to 0
     
     return rdf, radii #, normalization
 
@@ -232,7 +225,7 @@ def main():
     kept_rs = rs[num_kept_steps:]
     #print(kept_rs.shape)
 
-    rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, box_type = "periodic")
+    rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
     #rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
 
     #write to file
