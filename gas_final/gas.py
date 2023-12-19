@@ -41,9 +41,20 @@ def calculate_PE(r, epsilon=1, sigma=1):
     return torch.sum(PE)
 
 def calculate_force(r, epsilon=1, sigma=1):
+
+    print(r.shape)
+    #distances between all pairs of particles
+    r = torch.cdist(r, r)
+    #remove lower triangle
+    r = torch.triu(r)
+
     total_force = 4*epsilon*((-12*sigma**12/r**13) + (6*sigma**6/r**7))
     x_force = total_force * r[0] / r
     y_force = total_force * r[1] / r
+
+    print(x_force.shape)
+    print(y_force.shape)
+    quit()
     return torch.stack([x_force, y_force])
 
 def calculate_kinetic_energy(v):
