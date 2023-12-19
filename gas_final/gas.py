@@ -31,32 +31,6 @@ def set_initial_velocities(N, v0):
     # print(f"The average initial velocity is {torch.mean(torch.sqrt(v[0]**2 + v[1]**2)):.2f}")
     return v
 
-def calculate_PE(r, epsilon=1, sigma=1):
-    #distances between all pairs of particles
-    r = torch.cdist(r, r)
-    #remove lower triangle
-    r = torch.triu(r)
-
-    PE = 4*epsilon*((sigma/r)**12 - (sigma/r)**6)
-    return torch.sum(PE)
-
-def calculate_force(r, epsilon=1, sigma=1):
-
-    print(r.shape)
-    #distances between all pairs of particles
-    r = torch.cdist(r, r)
-    #remove lower triangle
-    r = torch.triu(r)
-
-    total_force = 4*epsilon*((-12*sigma**12/r**13) + (6*sigma**6/r**7))
-    x_force = total_force * r[0] / r
-    y_force = total_force * r[1] / r
-
-    print(x_force.shape)
-    print(y_force.shape)
-    quit()
-    return torch.stack([x_force, y_force])
-
 def calculate_kinetic_energy(v):
     return 0.5 * torch.sum(v**2)
 
@@ -68,17 +42,8 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic', f
     # Initial State
     rs[0] = r
     vs[0] = v
-    #us[0] = calculate_PE(r)
     ke[0] = calculate_kinetic_energy(v)
     for i in progress.track(range(1,ts), description='Simulating Steps'):
-        if force_type == 'LJ':
-            #calculate the force on each particle
-            force = calculate_force(r)
-            #update velocities
-            v = v + force*dt
-            #calculate the potential energy (will be zero if force_type is None)
-            us[i] = calculate_PE(r)
-        
         #particle-particle collisions
         ic = ids_pairs[get_deltad2_pairs(r, ids_pairs) < d_cutoff**2] #indices of colliding particles
         v[:, ic[:,0]], v[:,ic[:,1]] = compute_new_v(v[:, ic[:,0]], v[:,ic[:,1]], r[:, ic[:,0]], r[:,ic[:,1]]) #update velocities
@@ -107,7 +72,6 @@ def get_rdf(rs_arg, dr, L, cutoff=0.9, correction=False):
     r_max = (L/2) * cutoff
     g_r_avg = np.zeros(int(r_max/dr))
     lengths = []
-    # print(f'g_r_avg shape: {g_r_avg.shape}')
     N = rs_arg.shape[2]
 
     for snapshot in progress.track(rs_arg, description='Computing RDF'):
@@ -130,18 +94,16 @@ def get_rdf(rs_arg, dr, L, cutoff=0.9, correction=False):
     #create a radii array that is the same length as g_r_avg
     radii = np.arange(len(g_r_avg)) * dr
     if correction:
-        correction = calculate_correction(radii, g_r_avg, rho=N/(L**2))
+        area_of_particle = np.pi * 0.005**2
+        correction = calculate_correction(radii, g_r_avg, rho=area_of_particle * N/(L**2))
     else:
         correction = 0
     return g_r_avg, radii, correction
 
 def compute_rdf(rs_arg, L, dr):
-    # print(rs_arg.shape)
-    #rs=rs.T
-
     N = rs_arg.shape[2]
-    bulk_density = N / L**2
-    # print(f"bulk_density: {bulk_density}")
+    area_of_particle = np.pi * 0.005**2
+    bulk_density = area_of_particle * N / L**2
 
     max_dist = np.sqrt(2) * L
 
@@ -153,8 +115,6 @@ def compute_rdf(rs_arg, L, dr):
     for r in progress.track(radii, description='Computing RDF'):
 
         for points in rs_arg:
-            # print(points.shape)
-
             points = points.T
 
             # Create a mask to exclude particles near the edges of the box for the current radius
@@ -166,16 +126,11 @@ def compute_rdf(rs_arg, L, dr):
             # print(valid_points.shape)
             #number of valid points
             n_valid = valid_points.shape[0]
-            # print(f"n_valid: {n_valid}")
-            # quit()
 
             # Compute all pair distances for the valid points
             # Need to find distances between valid points and ALL points
             dists = torch.cdist(points, points)
-            # print(dists.shape)
             dists = dists[mask_edge, :]
-            # print(dists.shape)
-            # dists = torch.cdist(valid_points, valid_points)
 
             # Remove lower triangle
             dists = torch.triu(dists)
@@ -202,8 +157,6 @@ def compute_rdf(rs_arg, L, dr):
 
     rdf = rdf_sum / len(rs_arg)
 
-    # print(f'length of rdf: {len(rdf)}')
-
     #Max radius plotted is 0.9 * L / 2
     rdf = rdf[1:int(0.9 * L / 2 / dr)]
     radii = radii[1:len(rdf)+1]
@@ -223,7 +176,7 @@ def getArgs():
     parser.add_argument('--force_type', type=str, default=None, help='Force type: LJ or None')
     return parser.parse_args()
 
-def animate(rs_arg):
+def animate(rs_arg,save=False):
     fig, ax = plt.subplots()
     artists = []
     for snapshot in progress.track(rs_arg, description='Creating Animation'):
@@ -233,10 +186,11 @@ def animate(rs_arg):
     # Create the animation
     ani = ArtistAnimation(fig, artists, interval=1, blit=True)
 
-    #save the animation
-    #ani.save('animation.gif', writer=animation.PillowWriter(fps=15))
-    #ani.save('animation.mov', writer=animation.FFMpegWriter(fps=60))
-    ani.save('animation.mp4', writer=animation.FFMpegWriter(fps=60))
+    if save:
+        #save the animation
+        #ani.save('animation.gif', writer=animation.PillowWriter(fps=15))
+        #ani.save('animation.mov', writer=animation.FFMpegWriter(fps=60))
+        ani.save('animation.mp4', writer=animation.FFMpegWriter(fps=60))
     
     # To display the animation
     plt.show()
@@ -314,7 +268,6 @@ def main():
         kept_steps = torch.tensor([args.t_steps-1])
 
     kept_rs = rs[kept_steps]
-    #print(kept_rs.shape)
 
     #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, cutoff=0.9)
     rdf, radii, correction = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9, correction=(args.force_type == 'LJ'))
@@ -322,9 +275,9 @@ def main():
     save_rdf_and_coords(rdf, radii, rs)
     plot_rdf(rdf, radii)
 
-    #animate(rs)
+    animate(rs)
     
-    plot_energy(us.cpu().numpy(), ke.cpu().numpy(), force_type=args.force_type, correction=correction)
+    #plot_energy(us.cpu().numpy(), ke.cpu().numpy(), force_type=args.force_type, correction=correction)
     
 if __name__ == "__main__":
     main()
