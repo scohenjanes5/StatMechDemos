@@ -1,9 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import ArtistAnimation
+import matplotlib.animation as animation
 import argparse
 from rich import progress
 import torch, rdfpy
+import matplotlib as mpl
+
+mpl.rcParams['animation.ffmpeg_path'] = '/home/sander/miniconda3/envs/ldm/bin/ffmpeg'
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -177,8 +181,13 @@ def animate(rs_arg):
         artists.append([ax.scatter(*snapshot.cpu(), s=1)])
 
     # Create the animation
-    animation = ArtistAnimation(fig, artists, interval=1, blit=True)
+    ani = ArtistAnimation(fig, artists, interval=1, blit=True)
 
+    #save the animation
+    #ani.save('animation.gif', writer=animation.PillowWriter(fps=15))
+    #ani.save('animation.mov', writer=animation.FFMpegWriter(fps=60))
+    ani.save('animation.mp4', writer=animation.FFMpegWriter(fps=60))
+    
     # To display the animation
     plt.show()
 
@@ -216,23 +225,22 @@ def main():
     rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
     if not args.test:
-        num_kept_steps = args.t_steps - 10 #int(args.t_steps/4)
+        #Get the indices of the last quarter of the time steps
+        last_quarter = int(args.t_steps/4)*3
+        #pick 25 random time steps from the last quarter
+        kept_steps = torch.randint(last_quarter, args.t_steps, (25,))
     else:
-        num_kept_steps = args.t_steps - 1
+        #keep the last time step
+        kept_steps = torch.tensor([args.t_steps-1])
 
-    kept_rs = rs[num_kept_steps:]
+    kept_rs = rs[kept_steps]
     #print(kept_rs.shape)
 
-    #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
-    rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
+    #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, cutoff=0.9)
+    #rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
 
-    #write to file
-    np.savetxt("rdf.csv", rdf, delimiter=",")
-    #write coordinates to file
-    np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
-
-    #plot
-    plot_rdf(rdf, radii)
+    #save_rdf_and_coords(rdf, radii, rs)
+    #plot_rdf(rdf, radii)
 
     #animate(rs)
 
