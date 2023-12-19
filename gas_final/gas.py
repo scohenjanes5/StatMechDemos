@@ -30,13 +30,39 @@ def set_initial_velocities(N, v0):
     # print(f"The average initial velocity is {torch.mean(torch.sqrt(v[0]**2 + v[1]**2)):.2f}")
     return v
 
-def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
+def calculate_PE(r, epsilon=1, sigma=1):
+    PE = 4*epsilon*((sigma/r)**12 - (sigma/r)**6)
+    return torch.sum(PE)
+
+def calculate_force(r, epsilon=1, sigma=1):
+    total_force = 4*epsilon*((-12*sigma**12/r**13) + (6*sigma**6/r**7))
+    x_force = total_force * r[0] / r
+    y_force = total_force * r[1] / r
+    return torch.stack([x_force, y_force])
+
+def calculate_kinetic_energy(v):
+    return 0.5 * torch.sum(v**2)
+
+def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic', force_type=None):
     rs = torch.zeros((ts, r.shape[0], r.shape[1])).to(device) #Store positions at each time step
     vs = torch.zeros((ts, v.shape[0], v.shape[1])).to(device) #Store velocities at each time step
+    us = torch.zeros(ts).to(device) #Store potential energy at each time step
+    ke = torch.zeros(ts).to(device) #Store kinetic energy at each time step
     # Initial State
     rs[0] = r
     vs[0] = v
+    #us[0] = calculate_PE(r)
+    ke[0] = calculate_kinetic_energy(v)
     for i in progress.track(range(1,ts), description='Simulating Steps'):
+        if force_type == 'LJ':
+            #calculate the force on each particle
+            force = calculate_force(r)
+            #update velocities
+            v = v + force*dt
+            #calculate the potential energy (will be zero if force_type is None)
+            us[i] = calculate_PE(r)
+        
+        #particle-particle collisions
         ic = ids_pairs[get_deltad2_pairs(r, ids_pairs) < d_cutoff**2] #indices of colliding particles
         v[:, ic[:,0]], v[:,ic[:,1]] = compute_new_v(v[:, ic[:,0]], v[:,ic[:,1]], r[:, ic[:,0]], r[:,ic[:,1]]) #update velocities
 
@@ -57,7 +83,8 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         
         rs[i] = r #store positions
         vs[i] = v #store velocities
-    return rs, vs
+        ke[i] = calculate_kinetic_energy(v) #store kinetic energy
+    return rs, vs, us, ke
 
 def get_rdf(rs_arg, dr, L, cutoff=0.9):
     r_max = (L/2) * cutoff
@@ -171,6 +198,7 @@ def getArgs():
     parser.add_argument('--radius', type=float, default=0.005, help='Collision radius')
     parser.add_argument('--box_type', type=str, default='periodic', help='Box type: periodic (p) or reflective (r)')
     parser.add_argument('--test', action='store_true', help='Use easier parameters for testing')
+    parser.add_argument('--force_type', type=str, default=None, help='Force type: LJ or None')
     return parser.parse_args()
 
 def animate(rs_arg):
@@ -195,6 +223,25 @@ def plot_rdf(rdf, radii):
     plt.plot(radii, rdf)
     plt.xlabel("r")
     plt.ylabel("g(r)")
+    plt.show()
+
+def save_rdf_and_coords(rdf, radii, rs):
+    np.savetxt("rdf.csv", rdf, delimiter=",")
+    np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
+
+def plot_energy(us, ke):
+    total_energy = us + ke
+    avg_energy = np.mean(total_energy)
+    avg_energy_per_particle = avg_energy / us.shape[0]
+    print(f"Average energy per particle: {avg_energy_per_particle:.2f}")
+    kT = avg_energy_per_particle / 1.5
+    print(f"kT: {kT}")
+    beta = 1 / kT
+    print(f"beta: {beta}")
+    #plt.plot(us, label="Potential Energy")
+    plt.plot(ke, label="Kinetic Energy")
+    #plt.plot(total_energy, label="Total Energy")
+    plt.legend()
     plt.show()
 
 def main():
@@ -222,7 +269,7 @@ def main():
     ids_pairs = torch.combinations(ids,2).to(device)
     v = set_initial_velocities(N, args.v0)
     print("Done")
-    rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
+    rs, vs, us, ke = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
 
     if not args.test:
         #Get the indices of the last quarter of the time steps
@@ -243,12 +290,9 @@ def main():
     #plot_rdf(rdf, radii)
 
     #animate(rs)
-
-    #plt.scatter(*rs[-1].cpu())
-    #plt.xlim(0,L)
-    #plt.ylim(0,L)
-    #plt.show()
-
+    
+    plot_energy(us.cpu().numpy(), ke.cpu().numpy())
+    
 if __name__ == "__main__":
     main()
 
