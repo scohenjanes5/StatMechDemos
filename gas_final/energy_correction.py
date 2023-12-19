@@ -10,7 +10,7 @@ def read_data(filename):
 
     integrand=g_r*u_r
 
-    number_of_points_to_remove=70
+    number_of_points_to_remove=90
     integrand=integrand[number_of_points_to_remove:]
     r=r[number_of_points_to_remove:]
 
@@ -28,17 +28,17 @@ def plot_integrand(r,integrand):
     plt.plot(r,integrand)
     plt.xlabel('r')
     plt.ylabel('g(r)*u(r)')
-    plt.title('Radial Distribution Function')
     plt.show()
 
 def main():
-    r, integrand=read_data('LJ-rdf.csv')
+    r, integrand=read_data('many_points_rdf.csv')
     N=4000
     V=10**2
     rho=N/V
     correction=calculate_correction(r,integrand,rho)
     print(correction)
     print(correction+505)
+    plot_integrand(r,integrand)
 
 if __name__ == '__main__':
     main()
