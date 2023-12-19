@@ -1,9 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import ArtistAnimation
+import matplotlib.animation as animation
 import argparse
 from rich import progress
-import torch
+import torch, rdfpy
+import matplotlib as mpl
+from energy_correction import calculate_correction
+
+mpl.rcParams['animation.ffmpeg_path'] = '/home/sander/miniconda3/envs/ldm/bin/ffmpeg'
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -26,13 +31,20 @@ def set_initial_velocities(N, v0):
     # print(f"The average initial velocity is {torch.mean(torch.sqrt(v[0]**2 + v[1]**2)):.2f}")
     return v
 
-def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
+def calculate_kinetic_energy(v):
+    return 0.5 * torch.sum(v**2)
+
+def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic', force_type=None):
     rs = torch.zeros((ts, r.shape[0], r.shape[1])).to(device) #Store positions at each time step
     vs = torch.zeros((ts, v.shape[0], v.shape[1])).to(device) #Store velocities at each time step
+    us = torch.zeros(ts).to(device) #Store potential energy at each time step
+    ke = torch.zeros(ts).to(device) #Store kinetic energy at each time step
     # Initial State
     rs[0] = r
     vs[0] = v
+    ke[0] = calculate_kinetic_energy(v)
     for i in progress.track(range(1,ts), description='Simulating Steps'):
+        #particle-particle collisions
         ic = ids_pairs[get_deltad2_pairs(r, ids_pairs) < d_cutoff**2] #indices of colliding particles
         v[:, ic[:,0]], v[:,ic[:,1]] = compute_new_v(v[:, ic[:,0]], v[:,ic[:,1]], r[:, ic[:,0]], r[:,ic[:,1]]) #update velocities
 
@@ -53,69 +65,103 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic'):
         
         rs[i] = r #store positions
         vs[i] = v #store velocities
-    return rs, vs
+        ke[i] = calculate_kinetic_energy(v) #store kinetic energy
+    return rs, vs, us, ke
+
+def get_rdf(rs_arg, dr, L, cutoff=0.9, correction=False):
+    r_max = (L/2) * cutoff
+    g_r_avg = np.zeros(int(r_max/dr))
+    lengths = []
+    N = rs_arg.shape[2]
+
+    for snapshot in progress.track(rs_arg, description='Computing RDF'):
+        points = snapshot.T.cpu().numpy()
+        # print(points.shape)
+        g_r, radii = rdfpy.rdf(points, dr=dr, rcutoff=cutoff, parallel=True)
+        lengths.append(len(g_r))
+        # print(f'g_r shape: {g_r.shape}')
+        #add the current g_r to the average. Extend the array if necessary
+        if len(g_r) > len(g_r_avg):
+            g_r_avg = np.pad(g_r_avg, (0,len(g_r)-len(g_r_avg)), 'constant', constant_values=(0))
+        elif len(g_r) < len(g_r_avg):
+            g_r = np.pad(g_r, (0,len(g_r_avg)-len(g_r)), 'constant', constant_values=(0))
+        g_r_avg += g_r
+    g_r_avg /= len(rs_arg)
+
+    min_length = min(lengths)
+    g_r_avg = g_r_avg[:min_length]
+
+    #create a radii array that is the same length as g_r_avg
+    radii = np.arange(len(g_r_avg)) * dr
+    if correction:
+        area_of_particle = np.pi * 0.005**2
+        correction = calculate_correction(radii, g_r_avg, rho=area_of_particle * N/(L**2))
+    else:
+        correction = 0
+    return g_r_avg, radii, correction
 
 def compute_rdf(rs_arg, L, dr):
-    # print(rs_arg.shape)
-    #rs=rs.T
+    N = rs_arg.shape[2]
+    area_of_particle = np.pi * 0.005**2
+    bulk_density = area_of_particle * N / L**2
 
     max_dist = np.sqrt(2) * L
 
     # Initialize RDF array
     rdf_sum = torch.zeros(int(max_dist/dr), device=device)
 
-    for points in progress.track(rs_arg, description='Computing RDF'):
+    radii = torch.arange(len(rdf_sum), device=device) * dr
 
-        points = points.T
+    for r in progress.track(radii, description='Computing RDF'):
 
-        # Compute all pair distances
-        dists = torch.cdist(points, points)
-        if args.box_type == 'periodic':
-            dists = torch.min(dists, max_dist - dists) # Take into account periodic boundary conditions
-        #print(dists.shape)
+        for points in rs_arg:
+            points = points.T
+
+            # Create a mask to exclude particles near the edges of the box for the current radius
+            mask_edge = torch.all((points >= r + dr) & (points <= L - (r + dr)), dim=1)
+
+            # Apply the mask to the points
+            valid_points = points[mask_edge]
+
+            # print(valid_points.shape)
+            #number of valid points
+            n_valid = valid_points.shape[0]
+
+            # Compute all pair distances for the valid points
+            # Need to find distances between valid points and ALL points
+            dists = torch.cdist(points, points)
+            dists = dists[mask_edge, :]
+
+            # Remove lower triangle
+            dists = torch.triu(dists)
         
-        # Compute bin indices for each distance
-        bins = (dists / dr).long()
+            # Compute bin indices for each distance
+            bins = (dists / dr).long()
 
-        # Create a mask for distances less than max_dist and exclude self pairs
-        mask = (dists < max_dist) & (dists > 0)
+            # Create a mask for distances between r and r+dr
+            mask = (dists < r+dr) & (dists > r)
 
-        masked_bins = bins[mask].flatten()
+            masked_bins = bins[mask].flatten()
 
-        # Increment RDF array only for distances less than L
-        rdf = torch.zeros_like(rdf_sum)
-        rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
+            # Increment RDF array only for distances less than L
+            rdf = torch.zeros_like(rdf_sum)
+            rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
+            
+            ring_area = np.pi * ((r + dr)**2 - r**2)
+            if n_valid > 0:
+                rdf /= n_valid*bulk_density*ring_area
+            else:
+                rdf *= 0
 
-        rdf_sum += rdf
+            rdf_sum += rdf
 
     rdf = rdf_sum / len(rs_arg)
 
-    # Normalize RDF
-    # Get number of particles
-    N = rs.shape[2]
+    #Max radius plotted is 0.9 * L / 2
+    rdf = rdf[1:int(0.9 * L / 2 / dr)]
+    radii = radii[1:len(rdf)+1]
 
-    bulk_density = N / L**2
-    rdf /= bulk_density
-
-    rdf /= (N * (N - 1) / 2)  # Divide by number of pairs
-
-    inner_radius = torch.arange(len(rdf), device=device) * dr 
-    outer_radius = inner_radius + dr
-    #areas = np.pi * (outer_radius**2 - inner_radius**2)
-    areas = 2 * np.pi * inner_radius * dr
-
-    rdf /=  areas
-
-    #tensor containing the radii
-    radii = inner_radius #torch.arange(len(rdf), device=device) * dr
-
-    #convert to numpy and trim zeros
-    rdf = rdf.cpu().numpy()
-    rdf = np.trim_zeros(rdf, 'b')
-    radii = radii.cpu().numpy()
-    radii = radii[:len(rdf)]
-    
-    return rdf, radii
+    return rdf.cpu().numpy(), radii.cpu().numpy()
 
 def getArgs():
     parser = argparse.ArgumentParser(description='Simulate a gas')
@@ -127,9 +173,10 @@ def getArgs():
     parser.add_argument('--radius', type=float, default=0.005, help='Collision radius')
     parser.add_argument('--box_type', type=str, default='periodic', help='Box type: periodic (p) or reflective (r)')
     parser.add_argument('--test', action='store_true', help='Use easier parameters for testing')
+    parser.add_argument('--force_type', type=str, default=None, help='Force type: LJ or None')
     return parser.parse_args()
 
-def animate(rs_arg):
+def animate(rs_arg,save=False):
     fig, ax = plt.subplots()
     artists = []
     for snapshot in progress.track(rs_arg, description='Creating Animation'):
@@ -137,8 +184,14 @@ def animate(rs_arg):
         artists.append([ax.scatter(*snapshot.cpu(), s=1)])
 
     # Create the animation
-    animation = ArtistAnimation(fig, artists, interval=1, blit=True)
+    ani = ArtistAnimation(fig, artists, interval=1, blit=True)
 
+    if save:
+        #save the animation
+        #ani.save('animation.gif', writer=animation.PillowWriter(fps=15))
+        #ani.save('animation.mov', writer=animation.FFMpegWriter(fps=60))
+        ani.save('animation.mp4', writer=animation.FFMpegWriter(fps=60))
+    
     # To display the animation
     plt.show()
 
@@ -148,48 +201,84 @@ def plot_rdf(rdf, radii):
     plt.ylabel("g(r)")
     plt.show()
 
-args = getArgs()
+def save_rdf_and_coords(rdf, radii, rs):
+    np.savetxt("rdf.csv", rdf, delimiter=",")
+    np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
 
-if args.box_type == 'p':
-    args.box_type = 'periodic'
-elif args.box_type == 'r':
-    args.box_type = 'reflective'
+def plot_energy(us, ke, force_type=None, correction=0):
+    total_energy = us + ke
+    avg_energy = np.mean(total_energy)
+    avg_energy_per_particle = avg_energy / us.shape[0]
+    print(f"Average energy per particle: {avg_energy_per_particle:.2f}")
+    if force_type == None:
+        kT = avg_energy_per_particle / 1.5
+        print(f"kT: {kT}")
+        beta = 1 / kT
+        print(f"beta: {beta}")
+    else:
+        beta = 0.0029702970297029703 #determined from no-force simulation 
+        avg_energy_ideal = 1.5 / beta
+        corrected_energy = avg_energy + correction
+        #print(f"Correction: {correction}")
 
-if args.test:
-    args.N = 101
-    args.v0 = 100
-    args.dt = 1e-6
-    args.t_steps = 1000
-    args.radius = 0.05
+        print(f"True average energy per particle: {avg_energy_per_particle:.2f}")
+        print(f"Ideal average energy per particle: {avg_energy_ideal:.2f}")
+        #print(f"Corrected average energy per particle: {corrected_energy:.2f}")
 
-L = args.L
-N = args.N
+    #plt.plot(us, label="Potential Energy")
+    #plt.plot(ke, label="Kinetic Energy")
+    #plt.plot(total_energy, label="Total Energy")
+    #plt.legend()
+    #plt.show()
 
-print("Setting up initial conditions...")
-r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
-ids = torch.arange(N)
-ids_pairs = torch.combinations(ids,2).to(device)
-v = set_initial_velocities(N, args.v0)
-print("Done")
-rs, vs = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
+def main():
 
-num_kept_steps = int(args.t_steps/2)
-num_kept_steps = args.t_steps - 1
+    args = getArgs()
 
-rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01)
+    if args.box_type == 'p':
+        args.box_type = 'periodic'
+    elif args.box_type == 'r':
+        args.box_type = 'reflective'
 
-#write to file
-np.savetxt("rdf.csv", rdf)
-#write coordinates to file
-np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
+    if args.test:
+        args.N = 101
+        args.v0 = 100
+        args.dt = 1e-6
+        args.t_steps = 1000
+        args.radius = 0.05
 
-#plot
-plot_rdf(rdf, radii)
+    L = args.L
+    N = args.N
 
-#animate(rs)
+    print("Setting up initial conditions...")
+    r = L * torch.rand((2,N), device=device) #X,Y coordinates in each row
+    ids = torch.arange(N)
+    ids_pairs = torch.combinations(ids,2).to(device)
+    v = set_initial_velocities(N, args.v0)
+    print("Done")
+    rs, vs, us, ke = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L, force_type = args.force_type)
 
-#plt.scatter(*rs[-1].cpu())
-#plt.xlim(0,L)
-#plt.ylim(0,L)
-#plt.show()
+    if not args.test:
+        #Get the indices of the last quarter of the time steps
+        last_quarter = int(args.t_steps/4)*3
+        #pick 25 random time steps from the last quarter
+        kept_steps = torch.randint(last_quarter, args.t_steps, (25,))
+    else:
+        #keep the last time step
+        kept_steps = torch.tensor([args.t_steps-1])
+
+    kept_rs = rs[kept_steps]
+
+    #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, cutoff=0.9)
+    rdf, radii, correction = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9, correction=(args.force_type == 'LJ'))
+
+    save_rdf_and_coords(rdf, radii, rs)
+    plot_rdf(rdf, radii)
+
+    animate(rs)
+    
+    #plot_energy(us.cpu().numpy(), ke.cpu().numpy(), force_type=args.force_type, correction=correction)
+    
+if __name__ == "__main__":
+    main()
 
