@@ -34,7 +34,9 @@ def main():
     r, integrand=read_data('many_points_rdf.csv')
     N=4000
     V=10**2
-    rho=N/V
+    particle_radius=0.05
+    particle_area=np.pi*particle_radius**2
+    rho=particle_area*N/V
     correction=calculate_correction(r,integrand,rho)
     print(correction)
     print(correction+505)
