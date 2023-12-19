@@ -6,6 +6,7 @@ import argparse
 from rich import progress
 import torch, rdfpy
 import matplotlib as mpl
+from energy_correction import calculate_correction
 
 mpl.rcParams['animation.ffmpeg_path'] = '/home/sander/miniconda3/envs/ldm/bin/ffmpeg'
 
@@ -31,6 +32,11 @@ def set_initial_velocities(N, v0):
     return v
 
 def calculate_PE(r, epsilon=1, sigma=1):
+    #distances between all pairs of particles
+    r = torch.cdist(r, r)
+    #remove lower triangle
+    r = torch.triu(r)
+
     PE = 4*epsilon*((sigma/r)**12 - (sigma/r)**6)
     return torch.sum(PE)
 
@@ -86,11 +92,12 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic', f
         ke[i] = calculate_kinetic_energy(v) #store kinetic energy
     return rs, vs, us, ke
 
-def get_rdf(rs_arg, dr, L, cutoff=0.9):
+def get_rdf(rs_arg, dr, L, cutoff=0.9, correction=False):
     r_max = (L/2) * cutoff
     g_r_avg = np.zeros(int(r_max/dr))
     lengths = []
     # print(f'g_r_avg shape: {g_r_avg.shape}')
+    N = rs_arg.shape[2]
 
     for snapshot in progress.track(rs_arg, description='Computing RDF'):
         points = snapshot.T.cpu().numpy()
@@ -111,7 +118,11 @@ def get_rdf(rs_arg, dr, L, cutoff=0.9):
 
     #create a radii array that is the same length as g_r_avg
     radii = np.arange(len(g_r_avg)) * dr
-    return g_r_avg, radii
+    if correction:
+        correction = calculate_correction(radii, g_r_avg, rho=N/(L**2))
+    else:
+        correction = 0
+    return g_r_avg, radii, correction
 
 def compute_rdf(rs_arg, L, dr):
     # print(rs_arg.shape)
@@ -229,20 +240,31 @@ def save_rdf_and_coords(rdf, radii, rs):
     np.savetxt("rdf.csv", rdf, delimiter=",")
     np.savetxt("coords.csv", rs[-1].cpu().numpy().T, delimiter=",")
 
-def plot_energy(us, ke):
+def plot_energy(us, ke, force_type=None, correction=0):
     total_energy = us + ke
     avg_energy = np.mean(total_energy)
     avg_energy_per_particle = avg_energy / us.shape[0]
     print(f"Average energy per particle: {avg_energy_per_particle:.2f}")
-    kT = avg_energy_per_particle / 1.5
-    print(f"kT: {kT}")
-    beta = 1 / kT
-    print(f"beta: {beta}")
+    if force_type == None:
+        kT = avg_energy_per_particle / 1.5
+        print(f"kT: {kT}")
+        beta = 1 / kT
+        print(f"beta: {beta}")
+    else:
+        beta = 0.0029702970297029703 #determined from no-force simulation 
+        avg_energy_ideal = 1.5 / beta
+        corrected_energy = avg_energy + correction
+        #print(f"Correction: {correction}")
+
+        print(f"True average energy per particle: {avg_energy_per_particle:.2f}")
+        print(f"Ideal average energy per particle: {avg_energy_ideal:.2f}")
+        #print(f"Corrected average energy per particle: {corrected_energy:.2f}")
+
     #plt.plot(us, label="Potential Energy")
-    plt.plot(ke, label="Kinetic Energy")
+    #plt.plot(ke, label="Kinetic Energy")
     #plt.plot(total_energy, label="Total Energy")
-    plt.legend()
-    plt.show()
+    #plt.legend()
+    #plt.show()
 
 def main():
 
@@ -269,7 +291,7 @@ def main():
     ids_pairs = torch.combinations(ids,2).to(device)
     v = set_initial_velocities(N, args.v0)
     print("Done")
-    rs, vs, us, ke = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L)
+    rs, vs, us, ke = motion(r, v, ids_pairs, ts=args.t_steps, dt=args.dt, d_cutoff=2*args.radius, box_size=L, force_type = args.force_type)
 
     if not args.test:
         #Get the indices of the last quarter of the time steps
@@ -284,14 +306,14 @@ def main():
     #print(kept_rs.shape)
 
     #rdf, radii = compute_rdf(rs[num_kept_steps:], L, dr=0.01, cutoff=0.9)
-    #rdf, radii = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9)
+    rdf, radii, correction = get_rdf(kept_rs, dr=0.01, L=L, cutoff=0.9, correction=(args.force_type == 'LJ'))
 
-    #save_rdf_and_coords(rdf, radii, rs)
-    #plot_rdf(rdf, radii)
+    save_rdf_and_coords(rdf, radii, rs)
+    plot_rdf(rdf, radii)
 
     #animate(rs)
     
-    plot_energy(us.cpu().numpy(), ke.cpu().numpy())
+    plot_energy(us.cpu().numpy(), ke.cpu().numpy(), force_type=args.force_type, correction=correction)
     
 if __name__ == "__main__":
     main()
