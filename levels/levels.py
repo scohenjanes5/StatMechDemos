@@ -168,10 +168,10 @@ def P_curve(T_max, Energy_levels, allow_negative=False):
 
 def getArgs():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-n', default = 10000, type=int, help = "number of particles in the system")
-    parser.add_argument('-t', '--temp', default = 25, help = "temperature of the system")
-    parser.add_argument('-e', '--energy', nargs = 2, default = [0,6], help = "energy levels of the system in multiples of kb")
-    parser.add_argument('-l', '--starting_level', type=int, default = 0, help = "starting level of the system. Either 0 or 1.")
+    parser.add_argument('-n', default = 10000, type=int, help = "number of particles in the system. Default is 10000.")
+    parser.add_argument('-t', '--temp', default = 25, help = "temperature of the system. Default is 25 K.")
+    parser.add_argument('-e', '--energy', nargs = 2, default = [0,6], help = "energy levels of the system in multiples of kb. Default is 0 kb*K and 6 kb*K.")
+    parser.add_argument('-l', '--starting_level', type=int, default = 0, help = "starting level of the system. Either 0 or 1. Default is 0.")
     parser.add_argument('-m', '--monte', default=False, action="store_true", help = "run the monte carlo simulation")
     parser.add_argument('-p', '--prob', default=False, action="store_true", help = "plot the probability curves")
     parser.add_argument('-q', '--quiet', default=False, action="store_true", help = "don't plot the S(E) curve for the monte carlo simulation.")
@@ -221,7 +221,7 @@ if args.prob:
 
     plt.plot(T_array,p1_array,label=f"Lower level ({args.energy[0]} kb*K)")
     plt.plot(T_array,p2_array,label=f"Upper level ({args.energy[1]} kb*K)")
-    plt.xlabel("Temperature")
+    plt.xlabel("Temperature (K)")
     plt.ylabel("Probability")
     plt.title(f"Probability of finding a particle in each level")
     plt.legend()
