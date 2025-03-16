@@ -1,10 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 from Ising import runMC
 
 # Define temperature
-temp = 0.1
+temp = 5
 
 # Run the simulation
 mag, iterations = runMC(1 / temp, 20, 0, 10000, plot=True)
@@ -33,5 +33,10 @@ ax2.set_ylabel("Magnetization")
 # Create the animation
 ani = FuncAnimation(fig, update, frames=len(iterations), interval=10, blit=True)
 
-# Show the animation
-plt.show()
+vid = False
+if not vid:
+    plt.show()
+else:
+    writer = FFMpegWriter(fps=30, metadata=dict(artist="Me"), bitrate=1800)
+    ani.save("ising_model_animation.mp4", writer=writer)
+    print("Animation saved to 'ising_model_animation.mp4'")
