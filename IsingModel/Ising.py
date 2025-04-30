@@ -13,7 +13,7 @@ def initialstate(N):
     return state
 
 
-def mcmove(config, beta, N):
+def mcmove(config, beta, N, field=0):
     """Monte Carlo move using Metropolis algorithm"""
     # choose a random spin
     a = np.random.randint(0, N)
@@ -26,7 +26,7 @@ def mcmove(config, beta, N):
         + config[(a - 1) % N, b]
         + config[a, (b - 1) % N]
     )
-    cost = 2 * s * neighbors
+    cost = 2 * s * neighbors - field * s
     # flip the spin based on the probability of the transition.
     # If unfavorable interaction, s and neighbors have opposite signs, so cost is negative.
     flip = False
@@ -42,19 +42,19 @@ def calcMag(config):
     return mag
 
 
-def runMC(beta, N, eqSteps, mcSteps, plot=False):
+def runMC(beta, N, eqSteps, mcSteps, plot=False, field=0):
     """Run Monte Carlo simulation for a given beta and lattice size"""
     config = initialstate(N)
     iterations = [config.copy()]
     mag = 0
 
     for i in range(eqSteps):
-        config, flip = mcmove(config, beta, N)
+        config, flip = mcmove(config, beta, N, field=field)
         if flip and plot:
             iterations.append(config.copy())
 
     for i in range(mcSteps):
-        config, flip = mcmove(config, beta, N)
+        config, flip = mcmove(config, beta, N, field=field)
         if flip and plot:
             iterations.append(config.copy())
         mag += calcMag(config)
@@ -72,6 +72,7 @@ if __name__ == "__main__":
     N = 20  #  size of the lattice, N x N
     eqSteps = 400000  #  number of MC sweeps for equilibration
     mcSteps = 150000  #  number of MC sweeps for calculation
+    field = 5
 
     T = np.linspace(1.50, 3.30, nt)
     # T = np.random.normal(2.3, 0.5, nt)
@@ -96,6 +97,7 @@ if __name__ == "__main__":
                         N,
                         int(stepModifier * eqSteps),
                         int(stepModifier * mcSteps),
+                        field=field,
                     )
                 )
 

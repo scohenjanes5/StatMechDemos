@@ -5,9 +5,9 @@ from Ising import runMC
 
 # Define temperature
 temp = 5
-
+field = -15
 # Run the simulation
-mag, iterations = runMC(1 / temp, 20, 0, 10000, plot=True)
+mag, iterations = runMC(1 / temp, 20, 0, 10000, plot=True, field=field)
 
 # Function to update the grid for each frame in the animation
 def update(frame):
