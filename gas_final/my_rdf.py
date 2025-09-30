@@ -33,4 +33,3 @@ axs[0].set_title('g(r) from gas.py')
 axs[1].plot(real_radii, real_g_r)
 axs[1].set_title('g(r) from rdfpy')
 plt.show()
-

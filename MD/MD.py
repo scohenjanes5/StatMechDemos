@@ -64,10 +64,10 @@ def advance_time(total_time,dt,x0,v0):
 
         analitic_x = x_analytic(time_elapsed,Initial_x,Initial_v)
         analitic_v = v_analytic(time_elapsed,Initial_x,Initial_v)
-        
+
         x_differences.append(xt-analitic_x)
         v_differences.append(vt-analitic_v)
-       
+
         v_array.append(vt)
         x_array.append(xt)
         PE_array.append(PE)
@@ -79,7 +79,7 @@ def advance_time(total_time,dt,x0,v0):
         v0 = vt
         time_elapsed += dt
         #print(f"At time t = {time_elapsed:.2f} the position is {xt:.3f}, the velocity is {vt:.5f} and the total energy is {PE+KE:.3f}")
-   
+
     if total_time == 0:
         xt = x0
         vt = v0
@@ -114,4 +114,3 @@ ax3.set_xlabel("Timestep")
 ax3.set_ylabel("Errors")
 ax3.legend()
 plt.show()
-
