@@ -53,16 +53,16 @@ def motion(r, v, ids_pairs, ts, dt, d_cutoff, box_size=1, box_type='periodic', f
             v[0,r[0]<0] = torch.abs(v[0,r[0]<0]) #particles that hit the left wall bounce back
             v[1,r[1]>box_size] = -torch.abs(v[1,r[1]>box_size]) #particles that hit the top wall bounce back
             v[1,r[1]<0] = torch.abs(v[1,r[1]<0]) #particles that hit the bottom wall bounce back
-        
+
         r = r + v*dt #update positions according to velocities
-        
+
         if box_type == 'periodic':
             #impose periodic boundary conditions
             r[0,r[0]>box_size] = r[0,r[0]>box_size] - box_size #particles that hit the right wall reappear on the left
             r[0,r[0]<0] = r[0,r[0]<0] + box_size #particles that hit the left wall reappear on the right
             r[1,r[1]>box_size] = r[1,r[1]>box_size] - box_size #particles that hit the top wall reappear on the bottom
             r[1,r[1]<0] = r[1,r[1]<0] + box_size #particles that hit the bottom wall reappear on the top
-        
+
         rs[i] = r #store positions
         vs[i] = v #store velocities
         ke[i] = calculate_kinetic_energy(v) #store kinetic energy
@@ -134,7 +134,7 @@ def compute_rdf(rs_arg, L, dr):
 
             # Remove lower triangle
             dists = torch.triu(dists)
-        
+
             # Compute bin indices for each distance
             bins = (dists / dr).long()
 
@@ -146,7 +146,7 @@ def compute_rdf(rs_arg, L, dr):
             # Increment RDF array only for distances less than L
             rdf = torch.zeros_like(rdf_sum)
             rdf.scatter_add_(0, masked_bins, torch.ones_like(masked_bins, dtype=rdf.dtype))
-            
+
             ring_area = np.pi * ((r + dr)**2 - r**2)
             if n_valid > 0:
                 rdf /= n_valid*bulk_density*ring_area
@@ -191,7 +191,7 @@ def animate(rs_arg,save=False):
         #ani.save('animation.gif', writer=animation.PillowWriter(fps=15))
         #ani.save('animation.mov', writer=animation.FFMpegWriter(fps=60))
         ani.save('animation.mp4', writer=animation.FFMpegWriter(fps=60))
-    
+
     # To display the animation
     plt.show()
 
@@ -216,7 +216,7 @@ def plot_energy(us, ke, force_type=None, correction=0):
         beta = 1 / kT
         print(f"beta: {beta}")
     else:
-        beta = 0.0029702970297029703 #determined from no-force simulation 
+        beta = 0.0029702970297029703 #determined from no-force simulation
         avg_energy_ideal = 1.5 / beta
         corrected_energy = avg_energy + correction
         #print(f"Correction: {correction}")
@@ -276,9 +276,8 @@ def main():
     plot_rdf(rdf, radii)
 
     animate(rs)
-    
+
     #plot_energy(us.cpu().numpy(), ke.cpu().numpy(), force_type=args.force_type, correction=correction)
-    
+
 if __name__ == "__main__":
     main()
-

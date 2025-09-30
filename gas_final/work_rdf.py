@@ -13,7 +13,7 @@ def g_r(r, sigma=1, epsilon=1, beta=1):
 
 def main():
     #v = 500
-    #T = v**2 
+    #T = v**2
     #beta = 1 / T
 
     beta = 0.0029702970297029703
